@@ -1,0 +1,20 @@
+---
+import Base from '../layouts/Base.astro';
+import MapExplorer from '../components/MapExplorer.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import { data, projectsForState } from '../lib/data';
+---
+<Base description="A public map for tracking infrastructure projects in India. Explore metro corridors by state, city and project.">
+  <section class="home-intro shell">
+    <div class="intro-copy"><div class="section-label"><span class="live-dot"></span> OPEN INFRASTRUCTURE ATLAS <span class="label-line"></span> INDIA</div><h1>See what’s being <em>built.</em><br />Understand what’s <em>changing.</em></h1><p>Explore public projects from a national view down to the streets they serve. Every update should have a source, a date, and a visible history.</p><div class="intro-actions"><a class="button button-primary" href="#explore-map">Explore the map <span aria-hidden="true">↘</span></a><a class="text-link" href="/methodology">How tracking works <span aria-hidden="true">↗</span></a></div></div>
+    <div class="intro-aside"><span class="aside-index">01 / THE PUBLIC RECORD</span><div class="orbital-icon" aria-hidden="true"><span></span><span></span><span></span></div><p>Built for people who want to know what is happening around them.</p><span class="aside-foot">OPEN DATA · OPEN SOURCE</span></div>
+  </section>
+  <section id="explore-map" class="map-section shell">
+    <div class="map-heading"><div><div class="section-label">EXPLORE THE ATLAS <span class="label-line"></span> PHASE 1</div><h2>From country to corridor.</h2><p>Select a state, then a city. Hover or tap a corridor for its overview.</p></div><div class="map-heading-side"><span class="map-count">03 <small>demo projects</small></span><a href="/projects" class="text-link">View list <span aria-hidden="true">↗</span></a></div></div>
+    <div class="demo-banner"><span class="demo-icon" aria-hidden="true">i</span> This prototype uses invented demonstration corridors. <a href="/methodology/#demonstration-data">Read the data note</a>.</div>
+    <MapExplorer />
+  </section>
+  <section class="section-pad shell"><div class="section-heading"><div><div class="section-label">BROWSE BY PLACE</div><h2>Start with a state.</h2></div><span class="muted">India → State → City → Project</span></div><div class="state-grid">{data.states.map((state, index) => <a class="state-card" href={`/states/${state.id}/`}><span class="state-number">0{index + 1} / {state.code}</span><span class="state-card-title">{state.name}<span aria-hidden="true">↗</span></span><span>{projectsForState(state.id).length} demonstration project</span></a>)}</div></section>
+  <section class="section-pad shell featured-section"><div class="section-heading"><div><div class="section-label">PROJECT INDEX</div><h2>Projects in focus.</h2></div><a href="/projects" class="text-link">All projects <span aria-hidden="true">↗</span></a></div><div class="project-grid">{data.projects.map((project) => <ProjectCard project={project} />)}</div></section>
+  <section class="principle-section"><div class="shell principle-inner"><div class="principle-symbol" aria-hidden="true">✳</div><div><div class="section-label">OUR PRINCIPLE</div><h2>A project record anyone can inspect.</h2><p>Source links, dated claims and open data make the public story of infrastructure easier to follow. The community contribution workflow arrives in Phase 2.</p></div><a class="button button-light" href="/methodology">Read the methodology <span aria-hidden="true">↗</span></a></div></section>
+</Base>

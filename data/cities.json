@@ -1,0 +1,5 @@
+[
+  {"id":"bengaluru","name":"Bengaluru","stateId":"karnataka","summary":"A city scale view of one illustrative metro corridor.","coordinates":[77.5946,12.9716]},
+  {"id":"mumbai","name":"Mumbai","stateId":"maharashtra","summary":"A city scale view of one illustrative metro corridor.","coordinates":[72.8777,19.0760]},
+  {"id":"chennai","name":"Chennai","stateId":"tamil-nadu","summary":"A city scale view of one illustrative metro corridor.","coordinates":[80.2707,13.0827]}
+]

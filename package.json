@@ -1,0 +1,28 @@
+{
+  "name": "track-your-infra",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/copy-map-worker.mjs",
+    "dev": "astro dev",
+    "prebuild": "node scripts/copy-map-worker.mjs",
+    "build": "npm run validate && astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "validate": "node --import tsx scripts/validate.ts",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "astro": "^7.3.5",
+    "maplibre-gl": "^6.11.2",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.0",
+    "prettier": "^3.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}

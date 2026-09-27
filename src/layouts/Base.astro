@@ -1,0 +1,36 @@
+---
+import '../styles/global.css';
+const { title = 'TrackYourInfra', description = 'Explore public infrastructure projects through an open, evidence led map.' } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title === 'TrackYourInfra' ? title : `${title} · TrackYourInfra`} />
+    <meta property="og:description" content={description} />
+    <meta name="theme-color" content="#f5f7f6" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{title === 'TrackYourInfra' ? title : `${title} · TrackYourInfra`}</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="/" aria-label="TrackYourInfra home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>TrackYourInfra</span></a>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="/" aria-current={Astro.url.pathname === '/' ? 'page' : undefined}>Explore</a>
+          <a href="/projects" aria-current={Astro.url.pathname.startsWith('/projects') ? 'page' : undefined}>Projects</a>
+          <a href="/methodology" aria-current={Astro.url.pathname === '/methodology/' ? 'page' : undefined}>Methodology</a>
+        </nav>
+        <a class="header-link" href="/methodology/#contribute">Contribute <span aria-hidden="true">↗</span></a>
+      </div>
+    </header>
+    <main id="main"><slot /></main>
+    <footer class="site-footer">
+      <div class="shell footer-inner"><div><a class="brand footer-brand" href="/">TrackYourInfra</a><p>Public infrastructure, in the open.</p></div><div class="footer-links"><a href="/projects">Projects</a><a href="/data/projects.json">JSON data</a><a href="/methodology">Methodology</a><a href="/methodology/#demonstration-data">Data note</a></div><p class="footer-note">Phase 1 prototype · Demonstration data</p></div>
+    </footer>
+  </body>
+</html>

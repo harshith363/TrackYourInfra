@@ -1,0 +1,12 @@
+---
+import Base from '../../layouts/Base.astro';
+import MapExplorer from '../../components/MapExplorer.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
+import { data, projectsForState } from '../../lib/data';
+export function getStaticPaths() { return data.states.map((state) => ({ params: { state: state.id }, props: { state } })); }
+const { state } = Astro.props;
+const cities = data.cities.filter((city) => city.stateId === state.id);
+const projects = projectsForState(state.id);
+const routeKm = projects.reduce((sum, project) => sum + project.routeLengthKm, 0).toFixed(1);
+---
+<Base title={`${state.name} infrastructure`}><div class="shell page-intro"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">India</a><span>/</span><span>{state.name}</span></nav><div class="section-label">STATE / {state.code}</div><h1>{state.name}<em>.</em></h1><p>{state.summary}</p><div class="stat-strip"><div><strong>{cities.length}</strong><span>tracked city</span></div><div><strong>{projects.length}</strong><span>demo project</span></div><div><strong>{routeKm} km</strong><span>illustrative route</span></div></div></div><section class="shell regional-map"><div class="section-heading"><div><div class="section-label">GEOGRAPHY</div><h2>Explore the state.</h2></div><span class="muted">Select a city marker</span></div><MapExplorer initialState={state.id} compact /></section><section class="shell section-pad"><div class="section-heading"><div><div class="section-label">CITIES</div><h2>Places in this record.</h2></div></div><div class="state-grid">{cities.map((city) => <a class="state-card" href={`/states/${state.id}/cities/${city.id}/`}><span class="state-number">CITY / {state.code}</span><span class="state-card-title">{city.name}<span aria-hidden="true">↗</span></span><span>{city.summary}</span></a>)}</div></section><section class="shell section-pad"><div class="section-heading"><div><div class="section-label">PROJECTS</div><h2>Tracked here.</h2></div></div><div class="project-grid">{projects.map((project) => <ProjectCard project={project} />)}</div></section></Base>

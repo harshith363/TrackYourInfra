@@ -1,0 +1,5 @@
+[
+  {"id":"karnataka","name":"Karnataka","code":"KA","type":"state","summary":"Explore the Bengaluru demonstration corridor.","center":[76.9,14.6],"zoom":5.8},
+  {"id":"maharashtra","name":"Maharashtra","code":"MH","type":"state","summary":"Explore the Mumbai demonstration corridor.","center":[75.1,19.4],"zoom":5.6},
+  {"id":"tamil-nadu","name":"Tamil Nadu","code":"TN","type":"state","summary":"Explore the Chennai demonstration corridor.","center":[78.8,11.4],"zoom":5.8}
+]

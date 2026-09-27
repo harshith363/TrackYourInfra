@@ -1,0 +1,142 @@
+---
+import { data } from '../lib/data';
+const { initialState, initialCity, compact = false } = Astro.props as { initialState?: string; initialCity?: string; compact?: boolean };
+const mapData = {
+  states: data.states,
+  cities: data.cities,
+  projects: data.projects.map(({ id, slug, name, cityId, stateId, status, statusAsOf, routeLengthKm, summary, colour, geometry }) => ({ id, slug, name, cityId, stateId, status, statusAsOf, routeLengthKm, summary, colour, geometry })),
+};
+---
+<section class:list={['map-explorer', compact && 'map-compact']} aria-label="Infrastructure map" data-map-explorer data-initial-state={initialState ?? ''} data-initial-city={initialCity ?? ''}>
+  <div class="map-toolbar">
+    <div class="map-level"><span class="map-spark" aria-hidden="true">✦</span><span data-map-breadcrumb>India overview</span></div>
+    <button class="map-reset" type="button" data-map-reset>Reset map <span aria-hidden="true">↺</span></button>
+  </div>
+  <div class="map-canvas" data-map-canvas role="img" aria-label="Interactive map of demonstration metro corridors in India"></div>
+  <div class="map-filters"><label><span class="sr-only">Search map locations and projects</span><input type="search" placeholder="Find a place or project" data-map-search /></label><label><span class="sr-only">Filter map by project status</span><select data-map-status><option value="">All statuses</option><option value="approved">Approved</option><option value="under-construction">Under construction</option><option value="partially-operational">Partially operational</option></select></label></div>
+  <div class="map-callout" data-map-callout hidden></div>
+  <div class="map-guide"><span class="legend-dot"></span> City / project <span class="legend-line"></span> Route corridor <span class="legend-dash"></span> Planned</div>
+  <div class="map-overlay-note">Illustrative corridors · not surveyed alignments</div>
+  <script type="application/json" data-map-data set:html={JSON.stringify(mapData)}></script>
+  <div class="map-accessible-list" aria-label="Map locations">
+    <h3>Explore by location</h3>
+    <div class="map-location-buttons" data-map-list>
+      {data.states.map((state) => <button type="button" data-state-button={state.id}>{state.name}</button>)}
+    </div>
+  </div>
+</section>
+<script>
+  import * as maplibregl from 'maplibre-gl';
+  import 'maplibre-gl/dist/maplibre-gl.css';
+  maplibregl.setWorkerUrl('/maplibre/maplibre-gl-worker.mjs');
+
+  type MapState = { id: string; name: string; center: [number, number]; zoom: number };
+  type MapCity = { id: string; name: string; stateId: string; coordinates: [number, number] };
+  type MapProject = { id: string; slug: string; name: string; cityId: string; stateId: string; status: string; statusAsOf: string; routeLengthKm: number; summary: string; colour: string; geometry: { type: 'LineString'; coordinates: [number, number][] } };
+  type MapData = { states: MapState[]; cities: MapCity[]; projects: MapProject[] };
+
+  document.querySelectorAll<HTMLElement>('[data-map-explorer]').forEach((root) => {
+    const payload = root.querySelector<HTMLScriptElement>('[data-map-data]');
+    const canvas = root.querySelector<HTMLElement>('[data-map-canvas]');
+    const callout = root.querySelector<HTMLElement>('[data-map-callout]');
+    const breadcrumb = root.querySelector<HTMLElement>('[data-map-breadcrumb]');
+    const list = root.querySelector<HTMLElement>('[data-map-list]');
+    const search = root.querySelector<HTMLInputElement>('[data-map-search]');
+    const status = root.querySelector<HTMLSelectElement>('[data-map-status]');
+    if (!payload || !canvas || !callout || !breadcrumb || !list) return;
+    const data = JSON.parse(payload.textContent || '{}') as MapData;
+    let activeState = root.dataset.initialState || '';
+    let activeCity = root.dataset.initialCity || '';
+    let markers: maplibregl.Marker[] = [];
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const map = new maplibregl.Map({ container: canvas, style: { version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#eaf0ed' } }] }, center: [79.6, 21.1], zoom: 3.7, minZoom: 3, maxZoom: 13, attributionControl: false });
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+    const clearMarkers = () => { markers.forEach((marker) => marker.remove()); markers = []; };
+    const matchingProjects = () => data.projects.filter((project) => {
+      const city = data.cities.find((item) => item.id === project.cityId);
+      const state = data.states.find((item) => item.id === project.stateId);
+      const query = search?.value.trim().toLowerCase() || '';
+      const matchesText = !query || [project.name, city?.name, state?.name].some((value) => value?.toLowerCase().includes(query));
+      return matchesText && (!status?.value || project.status === status.value);
+    });
+    const showOverview = (project: MapProject) => {
+      const city = data.cities.find((item) => item.id === project.cityId);
+      callout!.hidden = false;
+      callout!.innerHTML = `<div class="callout-kicker">${city?.name ?? ''} · Demonstration data</div><h3>${project.name}</h3><p>${project.summary}</p><div class="callout-meta"><span>${project.status.replaceAll('-', ' ')}</span><span>${project.routeLengthKm} km</span></div><a href="/projects/${project.slug}/">View project <span aria-hidden="true">↗</span></a>`;
+    };
+    const addMarker = (coordinates: [number, number], label: string, kind: string, action: () => void, preview?: () => void) => {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = `map-marker marker-${kind}`; button.setAttribute('aria-label', label); button.textContent = kind === 'state' ? label : '';
+      button.addEventListener('click', action);
+      if (preview) { button.addEventListener('mouseenter', preview); button.addEventListener('focus', preview); }
+      markers.push(new maplibregl.Marker({ element: button, anchor: 'center' }).setLngLat(coordinates).addTo(map));
+    };
+    const selectProject = (project: MapProject) => {
+      showOverview(project);
+      map.easeTo({ center: project.geometry.coordinates[Math.floor(project.geometry.coordinates.length / 2)], zoom: 10.4, duration: reduceMotion ? 0 : 650 });
+      render();
+    };
+    const selectCity = (id: string) => {
+      const city = data.cities.find((item) => item.id === id); if (!city) return;
+      activeState = city.stateId; activeCity = id; callout!.hidden = true;
+      map.easeTo({ center: city.coordinates, zoom: 10.1, duration: reduceMotion ? 0 : 650 }); render();
+    };
+    const selectState = (id: string) => {
+      const state = data.states.find((item) => item.id === id); if (!state) return;
+      activeState = id; activeCity = ''; callout!.hidden = true;
+      map.easeTo({ center: state.center, zoom: state.zoom, duration: reduceMotion ? 0 : 650 }); render();
+    };
+    const render = () => {
+      clearMarkers();
+      const visible = matchingProjects();
+      const state = data.states.find((item) => item.id === activeState);
+      const city = data.cities.find((item) => item.id === activeCity);
+      breadcrumb!.textContent = city ? `India / ${state?.name} / ${city.name}` : state ? `India / ${state.name}` : 'India overview';
+      list!.replaceChildren();
+      if (!activeState) {
+        data.states.filter((item) => visible.some((project) => project.stateId === item.id)).forEach((item) => {
+          addMarker(item.center, `${item.name}, view cities`, 'state', () => selectState(item.id));
+          const button = document.createElement('button'); button.textContent = item.name; button.addEventListener('click', () => selectState(item.id)); list!.append(button);
+        });
+      } else if (!activeCity) {
+        data.cities.filter((item) => item.stateId === activeState && visible.some((project) => project.cityId === item.id)).forEach((item) => {
+          addMarker(item.coordinates, `${item.name}, view projects`, 'city', () => selectCity(item.id));
+          const button = document.createElement('button'); button.textContent = item.name; button.addEventListener('click', () => selectCity(item.id)); list!.append(button);
+        });
+      } else {
+        visible.filter((item) => item.cityId === activeCity).forEach((item) => {
+          const coords = item.geometry.coordinates[Math.floor(item.geometry.coordinates.length / 2)];
+          addMarker(coords, `${item.name}, ${item.status.replaceAll('-', ' ')}`, 'project', () => selectProject(item), () => showOverview(item));
+          const button = document.createElement('button'); button.textContent = item.name; button.addEventListener('focus', () => showOverview(item)); button.addEventListener('mouseenter', () => showOverview(item)); button.addEventListener('click', () => selectProject(item)); list!.append(button);
+        });
+      }
+      if (!list!.childElementCount) { const message = document.createElement('span'); message.className = 'map-no-results'; message.textContent = 'No matching projects'; list!.append(message); }
+      const cityFilter: any = ['==', ['get', 'cityId'], activeCity || '__none__'];
+      const visibleIds = visible.map((item) => item.id);
+      const visibleFilter: any = ['in', ['get', 'id'], ['literal', visibleIds]];
+      if (map.getLayer('routes')) map.setFilter('routes', ['all', cityFilter, visibleFilter, ['!=', ['get', 'status'], 'approved']]);
+      if (map.getLayer('planned-routes')) map.setFilter('planned-routes', ['all', cityFilter, visibleFilter, ['==', ['get', 'status'], 'approved']]);
+      if (map.getLayer('route-hits')) map.setFilter('route-hits', ['all', cityFilter, visibleFilter]);
+    };
+    map.on('load', () => {
+      map.addSource('india-schematic', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[68.1,23.7],[69.0,22.0],[70.2,22.2],[71.0,20.7],[72.2,19.3],[72.7,17.1],[73.7,15.2],[74.2,13.2],[76.1,10.2],[77.5,8.2],[78.5,9.0],[79.6,10.2],[80.3,13.0],[81.2,15.6],[82.2,17.6],[83.9,18.9],[85.1,19.9],[86.6,20.2],[87.6,21.7],[88.1,22.1],[88.0,24.2],[89.3,25.3],[91.0,25.6],[92.1,24.8],[93.4,25.3],[94.6,27.4],[95.5,28.1],[96.9,27.8],[97.4,28.4],[95.4,29.4],[93.8,29.9],[92.0,28.8],[90.6,27.7],[88.8,27.5],[87.4,27.7],[86.4,28.2],[84.6,29.2],[82.2,30.6],[80.3,30.9],[79.6,32.2],[78.7,32.6],[77.7,35.3],[75.8,34.7],[74.2,34.0],[73.6,32.1],[72.3,30.0],[70.3,28.0],[69.1,26.3],[68.1,23.7]]] } } });
+      map.addLayer({ id: 'india-fill', type: 'fill', source: 'india-schematic', paint: { 'fill-color': '#f8fbf8', 'fill-opacity': 0.96 } });
+      map.addLayer({ id: 'india-border', type: 'line', source: 'india-schematic', paint: { 'line-color': '#bdd0ca', 'line-width': 1.5 } });
+      map.addSource('routes', { type: 'geojson', data: { type: 'FeatureCollection', features: data.projects.map((project) => ({ type: 'Feature', properties: { id: project.id, cityId: project.cityId, colour: project.colour, status: project.status }, geometry: project.geometry })) } });
+      map.addLayer({ id: 'routes', type: 'line', source: 'routes', filter: ['!=', ['get', 'status'], 'approved'], paint: { 'line-color': ['get', 'colour'], 'line-width': 6, 'line-opacity': 0.9 } });
+      map.addLayer({ id: 'planned-routes', type: 'line', source: 'routes', filter: ['==', ['get', 'status'], 'approved'], paint: { 'line-color': ['get', 'colour'], 'line-width': 5, 'line-opacity': 0.95, 'line-dasharray': [2, 2] } });
+      map.addLayer({ id: 'route-hits', type: 'line', source: 'routes', paint: { 'line-color': '#000000', 'line-opacity': 0, 'line-width': 22 } });
+      map.on('mouseenter', 'route-hits', (event: maplibregl.MapLayerMouseEvent) => { map.getCanvas().style.cursor = 'pointer'; const project = data.projects.find((item) => item.id === event.features?.[0]?.properties?.id); if (project) showOverview(project); });
+      map.on('mouseleave', 'route-hits', () => { map.getCanvas().style.cursor = ''; });
+      map.on('click', 'route-hits', (event: maplibregl.MapLayerMouseEvent) => { const project = data.projects.find((item) => item.id === event.features?.[0]?.properties?.id); if (project) selectProject(project); });
+      if (activeCity) selectCity(activeCity); else if (activeState) selectState(activeState); else render();
+    });
+    root.querySelector('[data-map-reset]')?.addEventListener('click', () => { activeState = ''; activeCity = ''; callout.hidden = true; map.easeTo({ center: [79.6, 21.1], zoom: 3.7, duration: reduceMotion ? 0 : 650 }); render(); });
+    [search, status].forEach((control) => control?.addEventListener('input', () => { callout.hidden = true; render(); }));
+    window.addEventListener('trackyourinfra:filter', (event) => {
+      const detail = (event as CustomEvent<{ state?: string; city?: string }>).detail;
+      if (detail.city) selectCity(detail.city); else if (detail.state) selectState(detail.state);
+    });
+  });
+</script>

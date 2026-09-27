@@ -1,0 +1,12 @@
+---
+import Base from '../../../../layouts/Base.astro';
+import MapExplorer from '../../../../components/MapExplorer.astro';
+import ProjectCard from '../../../../components/ProjectCard.astro';
+import { data, getState, projectsForCity, statusLabel } from '../../../../lib/data';
+export function getStaticPaths() { return data.cities.map((city) => ({ params: { state: city.stateId, city: city.id }, props: { city } })); }
+const { city } = Astro.props;
+const state = getState(city.stateId)!;
+const projects = projectsForCity(city.id);
+const routeKm = projects.reduce((sum, project) => sum + project.routeLengthKm, 0).toFixed(1);
+---
+<Base title={`${city.name} infrastructure`}><div class="shell page-intro"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">India</a><span>/</span><a href={`/states/${state.id}/`}>{state.name}</a><span>/</span><span>{city.name}</span></nav><div class="section-label">CITY / {state.code}</div><h1>{city.name}<em>.</em></h1><p>{city.summary}</p><div class="stat-strip"><div><strong>{projects.length}</strong><span>demo project</span></div><div><strong>{routeKm} km</strong><span>illustrative route</span></div><div><strong>{projects.length ? statusLabel(projects[0].status) : 'No projects'}</strong><span>example status</span></div></div></div><section class="shell regional-map"><div class="section-heading"><div><div class="section-label">CITY VIEW</div><h2>Explore the corridors.</h2></div><span class="muted">Hover, tap or focus a route</span></div><MapExplorer initialState={state.id} initialCity={city.id} compact /></section><section class="shell section-pad"><div class="section-heading"><div><div class="section-label">PROJECTS</div><h2>The city record.</h2></div></div><div class="project-grid">{projects.map((project) => <ProjectCard project={project} />)}</div></section></Base>

@@ -1,0 +1,14 @@
+---
+import type { Project } from '../lib/data';
+import { formatDate, getCity, getState, statusLabel } from '../lib/data';
+const { project } = Astro.props as { project: Project };
+const city = getCity(project.cityId)!;
+const state = getState(project.stateId)!;
+---
+<article class="project-card" data-project-card data-name={project.name.toLowerCase()} data-city={city.id} data-state={state.id} data-status={project.status} data-agency={project.agencyId} data-target={project.currentTarget ?? project.originalTarget ?? ''} data-updated={project.updatedAt}>
+  <div class="card-top"><span class="eyebrow">{city.name} <span aria-hidden="true">/</span> {state.name}</span><span class={`status status-${project.status}`}>{statusLabel(project.status)}</span></div>
+  <h3><a href={`/projects/${project.slug}/`}>{project.name}<span class="card-arrow" aria-hidden="true">↗</span></a></h3>
+  <p>{project.summary}</p>
+  <div class="card-facts"><span><strong>{project.routeLengthKm} km</strong> route</span><span><strong>{project.stationCount}</strong> stations</span></div>
+  <div class="card-bottom"><span>As of {formatDate(project.statusAsOf)}</span><span class="source-mini">Demo data</span></div>
+</article>

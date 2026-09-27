@@ -1,0 +1,27 @@
+---
+import Base from '../../layouts/Base.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
+import { data } from '../../lib/data';
+---
+<Base title="Projects" description="Browse demonstration Indian metro projects by state, city, status and agency.">
+  <div class="shell page-intro"><div class="section-label">THE PROJECT INDEX / PHASE 1</div><h1>Every project,<br /><em>one public record.</em></h1><p>Browse the demonstration records, then open a project to inspect its timeline and sources.</p></div>
+  <section class="shell directory-section" aria-label="Project directory"><div class="directory-controls"><label class="search-field"><span aria-hidden="true">⌕</span><span class="sr-only">Search projects</span><input id="project-search" type="search" placeholder="Search project, city or line" autocomplete="off" /></label><label>State<select id="state-filter"><option value="">All states</option>{data.states.map((state) => <option value={state.id}>{state.name}</option>)}</select></label><label>City<select id="city-filter"><option value="">All cities</option>{data.cities.map((city) => <option value={city.id}>{city.name}</option>)}</select></label><label>Status<select id="status-filter"><option value="">All statuses</option><option value="approved">Approved</option><option value="under-construction">Under construction</option><option value="partially-operational">Partially operational</option></select></label><label>Sort<select id="sort-filter"><option value="updated">Recently updated</option><option value="target">Expected completion</option><option value="name">Project name</option></select></label></div><div class="directory-summary"><span id="results-count">3 projects</span><span>Demonstration data · updated 27 Sep 2026</span></div><div class="project-grid" id="project-results">{data.projects.map((project) => <ProjectCard project={project} />)}</div><p class="empty-state" id="no-results" hidden>No projects match these filters. Try a different city or status.</p></section>
+  <script>
+    const cards = [...document.querySelectorAll<HTMLElement>('[data-project-card]')];
+    const search = document.querySelector<HTMLInputElement>('#project-search')!;
+    const state = document.querySelector<HTMLSelectElement>('#state-filter')!;
+    const city = document.querySelector<HTMLSelectElement>('#city-filter')!;
+    const status = document.querySelector<HTMLSelectElement>('#status-filter')!;
+    const sort = document.querySelector<HTMLSelectElement>('#sort-filter')!;
+    const results = document.querySelector<HTMLElement>('#project-results')!;
+    const count = document.querySelector<HTMLElement>('#results-count')!;
+    const empty = document.querySelector<HTMLElement>('#no-results')!;
+    const update = () => {
+      const query = search.value.trim().toLowerCase(); let shown = 0;
+      cards.forEach((card) => { const match = (!query || card.textContent?.toLowerCase().includes(query)) && (!state.value || card.dataset.state === state.value) && (!city.value || card.dataset.city === city.value) && (!status.value || card.dataset.status === status.value); card.hidden = !match; if (match) shown++; });
+      const sorted = [...cards].sort((a, b) => sort.value === 'name' ? (a.dataset.name || '').localeCompare(b.dataset.name || '') : sort.value === 'target' ? (a.dataset.target || '9999').localeCompare(b.dataset.target || '9999') : (b.dataset.updated || '').localeCompare(a.dataset.updated || ''));
+      sorted.forEach((card) => results.append(card)); count.textContent = `${shown} project${shown === 1 ? '' : 's'}`; empty.hidden = shown > 0;
+    };
+    [search, state, city, status, sort].forEach((input) => input.addEventListener('input', update));
+  </script>
+</Base>

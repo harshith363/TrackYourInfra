@@ -4,33 +4,7 @@
     "projectId": "bengaluru-metro-phase-3",
     "date": "2026-09-28",
     "reason": "Added the first source-backed project record; route alignment remains unverified.",
-    "fields": [
-      {
-        "field": "record",
-        "before": null,
-        "after": "Bengaluru Metro Phase 3"
-      }
-    ],
-    "sourceIds": [
-      "bengaluru-phase3-cabinet",
-      "bengaluru-phase3-bmrcl-policy"
-    ]
-  },
-  {
-    "id": "issue-2-initial",
-    "projectId": "bengaluru-purple-line",
-    "date": "2026-09-28",
-    "reason": "Initial draft generated from issue #2; requires maintainer review.",
-    "fields": [
-      {
-        "field": "record",
-        "before": null,
-        "after": "Purple Line"
-      }
-    ],
-    "sourceIds": [
-      "issue-2-source-1"
-    ],
-    "issueUrl": "https://github.com/harshith363/TrackYourInfra/issues/2"
+    "fields": [{ "field": "record", "before": null, "after": "Bengaluru Metro Phase 3" }],
+    "sourceIds": ["bengaluru-phase3-cabinet", "bengaluru-phase3-bmrcl-policy"]
   }
 ]

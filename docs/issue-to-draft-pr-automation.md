@@ -25,7 +25,8 @@ For a supported **New metro project** issue, the draft PR:
 - creates a stable project JSON candidate using the submitted name, scope, mapped city/state, and named agency;
 - creates a source record for each submitted public URL, preserving it as contributor supplied and leaving publication date unknown unless the form provides one;
 - leaves unsupported status, cost, length, station count, targets, and progress as `null`;
-- validates submitted GeoJSON coordinates and city extent, but always leaves accepted geometry as `null` pending human review of alignment and reuse/license information;
+- validates submitted GeoJSON coordinates, city extent, and proposal metadata; if the contributor explicitly confirms they created the route and grants CC BY 4.0 permission, stores it in a separate `routeProposal` field with `status: unverified`;
+- always leaves accepted `geometry` as `null` pending independent alignment review, even when a proposed line appears dashed on the public map;
 - adds a change-history entry linked to the originating issue, clearly identifying the record as a proposed initial addition.
 
 The generated PR description links to the issue, lists which fields came from the form, names which fields remain unknown, and includes a checklist for evidence, city/agency mapping, geometry, and history. It must not turn prose into an asserted metric or official status. A source URL alone is not evidence that every claim in the proposed record is true.
@@ -57,7 +58,7 @@ Any parser or validation failure leaves the issue and canonical data untouched. 
 
 - Filing an issue alone causes no branch, PR, or app data change.
 - A maintainer-applied preparation label creates at most one linked draft PR for a supported new-project issue.
-- The candidate contains only form-derived identity/scope/source data; unspecified claims remain null and proposed geometry stays clearly unaccepted.
+- The candidate contains only form-derived identity/scope/source data; unspecified claims and accepted geometry remain null. A licensed, syntactically valid route may appear separately as an unverified, dashed community proposal after merge.
 - Unsupported forms, malformed URLs/GeoJSON, ambiguous city/agency names, and ID conflicts fail closed with a readable run summary.
 - Generated files pass repository validation before the PR is opened.
 - A human must review evidence and route reuse terms, mark the PR ready, and merge it before the public site can include the project.

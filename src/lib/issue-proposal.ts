@@ -15,6 +15,7 @@ const headings = {
   scope: "What does this project record cover?",
   evidence: "Public source links and relevant page or section",
   route: "Optional route proposal or reference",
+  routePermission: "Permission to display a submitted route",
 } as const;
 type Field = keyof typeof headings;
 const missing = (value: string | undefined) =>
@@ -39,12 +40,16 @@ export function parseNewProjectIssue(body: string): Record<Field, string> {
       throw new Error(`Duplicate form field: ${heading}`);
     values.set(heading, section[2].trim());
   }
-  if (!Object.values(headings).every((heading) => values.has(heading)))
+  if (
+    !Object.entries(headings)
+      .filter(([key]) => key !== "routePermission")
+      .every(([, heading]) => values.has(heading))
+  )
     throw new Error("Only the New metro project Issue Form is supported.");
   const fields = Object.fromEntries(
     Object.entries(headings).map(([key, heading]) => [
       key,
-      values.get(heading)!,
+      values.get(heading) ?? "",
     ]),
   ) as Record<Field, string>;
   for (const field of ["name", "location", "scope", "evidence"] as const)
@@ -129,9 +134,28 @@ function selectAgency(value: string, agencies: Agency[]) {
   return matches[0];
 }
 
-function inspectRoute(raw: string, bounds: number[][] | undefined) {
+type InspectedRoute = {
+  hasProposal: boolean;
+  pointCount: number;
+  geometry?: { type: "LineString"; coordinates: [number, number][] };
+  precision?: "schematic" | "approximate";
+  sourceUrl?: string | null;
+};
+function inspectRoute(
+  raw: string,
+  bounds: number[][] | undefined,
+  cityId: string,
+): InspectedRoute {
   if (missing(raw)) return { hasProposal: false, pointCount: 0 };
   if (!raw.trim().startsWith("{")) return { hasProposal: true, pointCount: 0 };
+  if (
+    !bounds ||
+    bounds.length !== 2 ||
+    bounds.some((point) => point.length !== 2)
+  )
+    throw new Error(
+      "No reviewable city extent is available for this route proposal.",
+    );
   let value: unknown;
   try {
     value = JSON.parse(raw);
@@ -147,19 +171,29 @@ function inspectRoute(raw: string, bounds: number[][] | undefined) {
   const features = (value as { features?: unknown }).features;
   if (!Array.isArray(features) || features.length !== 1)
     throw new Error("Route proposal must contain exactly one feature.");
-  const geometry = features[0]?.geometry;
+  const feature = features[0];
+  const geometry = feature?.geometry;
   const coordinates =
-    geometry?.type === "LineString"
-      ? geometry.coordinates
-      : geometry?.type === "MultiPoint"
-        ? geometry.coordinates
-        : null;
+    geometry?.type === "LineString" ? geometry.coordinates : null;
   if (
     !Array.isArray(coordinates) ||
     coordinates.length < 2 ||
     coordinates.length > 200
   )
     throw new Error("Route proposal needs 2–200 point coordinates.");
+  if (feature.properties?.proposal !== true)
+    throw new Error("Route GeoJSON must be marked as a proposal.");
+  if (feature.properties?.cityId !== cityId)
+    throw new Error("Route proposal city does not match the project city.");
+  if (!["schematic", "approximate"].includes(feature.properties?.precision))
+    throw new Error("Route proposal precision is missing or invalid.");
+  const sourceUrl = feature.properties?.sourceUrl;
+  if (
+    sourceUrl !== null &&
+    sourceUrl !== undefined &&
+    (typeof sourceUrl !== "string" || !/^https?:\/\//.test(sourceUrl))
+  )
+    throw new Error("Route proposal source URL is invalid.");
   for (const point of coordinates) {
     if (
       !Array.isArray(point) ||
@@ -180,12 +214,24 @@ function inspectRoute(raw: string, bounds: number[][] | undefined) {
         "Route proposal has a point outside the selected city extent.",
       );
   }
-  return { hasProposal: true, pointCount: coordinates.length };
+  if (new Set(coordinates.map((point) => point.join(","))).size < 2)
+    throw new Error("Route proposal needs at least two distinct points.");
+  return {
+    hasProposal: true,
+    pointCount: coordinates.length,
+    geometry: {
+      type: "LineString",
+      coordinates: coordinates as [number, number][],
+    },
+    precision: feature.properties.precision as "schematic" | "approximate",
+    sourceUrl: sourceUrl ?? null,
+  };
 }
 
 export function prepareNewProject(input: {
   issueNumber: number;
   issueUrl: string;
+  author: string;
   body: string;
   today: string;
   cities: City[];
@@ -223,7 +269,31 @@ export function prepareNewProject(input: {
   for (const source of sources)
     if (input.sources.some((existing) => existing.id === source.id))
       throw new Error(`Source ID ${source.id} already exists.`);
-  const route = inspectRoute(fields.route, input.cityBounds[city.id]?.bounds);
+  const route = inspectRoute(
+    fields.route,
+    input.cityBounds[city.id]?.bounds,
+    city.id,
+  );
+  if (route.geometry) {
+    if (
+      fields.routePermission !==
+      "I created these route points and license them under CC BY 4.0"
+    )
+      throw new Error(
+        "Displaying route points requires the contributor permission statement.",
+      );
+    if (!/^[A-Za-z0-9-]+$/.test(input.author))
+      throw new Error("Issue author is invalid.");
+    if (route.sourceUrl && !urls.includes(route.sourceUrl))
+      throw new Error(
+        "Route source URL must also appear in the public source links field.",
+      );
+  }
+  const routeSourceIds = route.sourceUrl
+    ? sources
+        .filter((source) => source.url === route.sourceUrl)
+        .map((source) => source.id)
+    : sources.map((source) => source.id);
   const project = projectSchema.parse({
     id: slug,
     slug,
@@ -250,6 +320,18 @@ export function prepareNewProject(input: {
     summary: fields.scope,
     colour: "#277d68",
     geometry: null,
+    routeProposal: route.geometry
+      ? {
+          status: "unverified",
+          geometry: route.geometry,
+          precision: route.precision!,
+          license: "CC BY 4.0",
+          creator: input.author,
+          issueUrl: input.issueUrl,
+          submittedAt: input.today,
+          sourceIds: routeSourceIds,
+        }
+      : undefined,
     stations: [],
     milestones: [],
   });
@@ -263,7 +345,18 @@ export function prepareNewProject(input: {
       projectId: slug,
       date: input.today,
       reason: `Initial draft generated from issue #${input.issueNumber}; requires maintainer review.`,
-      fields: [{ field: "record", before: null, after: fields.name }],
+      fields: [
+        { field: "record", before: null, after: fields.name },
+        ...(route.geometry
+          ? [
+              {
+                field: "routeProposal",
+                before: null,
+                after: `Unverified ${route.precision} community route`,
+              },
+            ]
+          : []),
+      ],
       sourceIds: sources.map((source) => source.id),
       issueUrl: input.issueUrl,
     },

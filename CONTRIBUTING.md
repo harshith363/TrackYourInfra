@@ -6,9 +6,9 @@ Thank you for helping build a public, checkable account of infrastructure work. 
 
 Use the forms under GitHub Issues to report a project update, propose a metro project, correct a map feature, or report a site bug. Include the affected project/city, what should change, when the information applied, and a public source link with a page or section when possible. Issues are public; do not include private contact details.
 
-For a route proposal, use `/contribute/map/` on the locally running site. Click or tap to place dots, export GeoJSON, then paste it into the map correction or new-project form. The line is an approximate proposal until reviewed.
+For a route proposal, use `/contribute/map/` on the locally running site. Click or tap to place dots, export GeoJSON, then paste it into the map correction or new-project form. A new-project submission can display the line as a dashed **unverified community proposal** after a reviewed PR is merged, if you created the coordinates and grant CC BY 4.0 permission in the form. This does not make it an accepted or surveyed alignment. Do not copy third-party geometry unless you have compatible permission.
 
-For a **New metro project** issue, a maintainer can add the `automation:prepare-draft-pr` label after initial triage. This prepares a linked draft pull request with a project file, provisional source records, and a change-history entry. Filing or editing an issue alone does not update the app. The draft leaves unverified facts and map geometry unset; a maintainer checks the sources, edits the PR, marks it ready, and merges it before the record can appear in a real-data build. Other issue forms still use the manual PR path.
+For a **New metro project** issue, a maintainer can add the `automation:prepare-draft-pr` label after initial triage. This prepares a linked draft pull request with a project file, provisional source records, and a change-history entry. Filing or editing an issue alone does not update the app. Unverified facts and **accepted** map geometry stay unset; a contributor-licensed route can be stored separately as an unverified proposal. A maintainer checks the submission, edits the PR, marks it ready, and merges it before the record or proposal can appear in a real-data build. Other issue forms still use the manual PR path.
 
 ## Edit data directly
 

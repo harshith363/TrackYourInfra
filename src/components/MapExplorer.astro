@@ -6,7 +6,7 @@ const mapData = {
   states: data.states,
   cities: data.cities,
   cityContext,
-  projects: data.projects.map(({ id, slug, name, cityId, stateId, status, statusAsOf, routeLengthKm, summary, colour, geometry }) => ({ id, slug, name, cityId, stateId, status, statusAsOf, routeLengthKm, summary, colour, geometry })),
+  projects: data.projects.map(({ id, slug, name, cityId, stateId, status, statusAsOf, routeLengthKm, summary, colour, geometry, routeProposal }) => ({ id, slug, name, cityId, stateId, status, statusAsOf, routeLengthKm, summary, colour, geometry, routeProposal })),
 };
 const mapJson = JSON.stringify(mapData).replaceAll('<', '\\u003c');
 ---
@@ -18,8 +18,8 @@ const mapJson = JSON.stringify(mapData).replaceAll('<', '\\u003c');
   <div class="map-canvas" data-map-canvas role="img" aria-label="Interactive map of tracked metro projects in India"></div>
   <div class="map-filters"><label><span class="sr-only">Search map locations and projects</span><input type="search" placeholder="Find a place or project" data-map-search /></label><label><span class="sr-only">Filter map by project status</span><select data-map-status><option value="">All statuses</option><option value="approved">Approved</option><option value="under-construction">Under construction</option><option value="partially-operational">Partially operational</option></select></label></div>
   <div class="map-callout" data-map-callout hidden></div>
-  <div class="map-guide"><span class="legend-dot"></span> City / project <span class="legend-line"></span> Route corridor <span class="legend-dash"></span> Planned</div>
-  <div class="map-overlay-note" data-map-note>{dataMode === 'demo' ? 'Illustrative corridors · not surveyed alignments' : 'Routes appear only after evidence review'}</div>
+  <div class="map-guide"><span class="legend-dot"></span> City / project <span class="legend-line"></span> Reviewed corridor <span class="legend-dash"></span> Planned <span class="legend-proposal"></span> Unverified community proposal</div>
+  <div class="map-overlay-note" data-map-note>{dataMode === 'demo' ? 'Illustrative corridors · not surveyed alignments' : 'Solid routes are reviewed; dashed orange lines are unverified proposals'}</div>
   <script type="application/json" data-map-data set:html={mapJson}></script>
   <div class="map-accessible-list" aria-label="Map locations">
     <h3>Explore by location</h3>
@@ -35,7 +35,8 @@ const mapJson = JSON.stringify(mapData).replaceAll('<', '\\u003c');
 
   type MapState = { id: string; name: string; center: [number, number]; zoom: number };
   type MapCity = { id: string; name: string; stateId: string; coordinates: [number, number] };
-  type MapProject = { id: string; slug: string; name: string; cityId: string; stateId: string; status: string | null; statusAsOf: string | null; routeLengthKm: number | null; summary: string; colour: string; geometry: { type: 'LineString'; coordinates: [number, number][] } | null };
+  type RouteProposal = { status: 'unverified'; geometry: { type: 'LineString'; coordinates: [number, number][] }; precision: 'schematic' | 'approximate'; creator: string; issueUrl: string; license: 'CC BY 4.0' };
+  type MapProject = { id: string; slug: string; name: string; cityId: string; stateId: string; status: string | null; statusAsOf: string | null; routeLengthKm: number | null; summary: string; colour: string; geometry: { type: 'LineString'; coordinates: [number, number][] } | null; routeProposal?: RouteProposal };
   type CityContext = { bounds: [[number, number], [number, number]]; boundaryLabel: string; areas: { name: string; coordinates: [number, number] }[] };
   type MapData = { states: MapState[]; cities: MapCity[]; cityContext: Record<string, CityContext>; projects: MapProject[] };
 
@@ -101,7 +102,7 @@ const mapJson = JSON.stringify(mapData).replaceAll('<', '\\u003c');
     const showOverview = (project: MapProject) => {
       const city = data.cities.find((item) => item.id === project.cityId);
       callout!.hidden = false;
-      const kicker = document.createElement('div'); kicker.className = 'callout-kicker'; kicker.textContent = `${city?.name ?? ''} · ${project.geometry ? 'Mapped corridor' : 'Route not mapped'}`;
+      const kicker = document.createElement('div'); kicker.className = 'callout-kicker'; kicker.textContent = `${city?.name ?? ''} · ${project.geometry ? 'Reviewed corridor' : project.routeProposal ? 'Unverified community proposal' : 'Route not mapped'}`;
       const heading = document.createElement('h3'); heading.textContent = project.name;
       const summary = document.createElement('p'); summary.textContent = project.summary;
       const meta = document.createElement('div'); meta.className = 'callout-meta';
@@ -109,7 +110,11 @@ const mapJson = JSON.stringify(mapData).replaceAll('<', '\\u003c');
       const lengthLabel = document.createElement('span'); lengthLabel.textContent = project.routeLengthKm === null ? 'Length not reported' : `${project.routeLengthKm} km`;
       meta.append(statusLabel, lengthLabel);
       const link = document.createElement('a'); link.href = `/projects/${encodeURIComponent(project.slug)}/`; link.textContent = 'View project ↗';
-      callout!.replaceChildren(kicker, heading, summary, meta, link);
+      const proposalCredit = document.createElement('p');
+      if (project.routeProposal) proposalCredit.textContent = `Unverified ${project.routeProposal.precision} route by @${project.routeProposal.creator} · CC BY 4.0`;
+      const proposalLink = document.createElement('a');
+      if (project.routeProposal) { proposalLink.href = project.routeProposal.issueUrl; proposalLink.textContent = 'See submitted proposal ↗'; proposalLink.target = '_blank'; proposalLink.rel = 'noopener noreferrer'; }
+      callout!.replaceChildren(kicker, heading, summary, meta, ...(project.routeProposal ? [proposalCredit, proposalLink] : []), link);
     };
     const addMarker = (coordinates: [number, number], label: string, kind: string, action: () => void, preview?: () => void) => {
       const button = document.createElement('button');
@@ -121,7 +126,7 @@ const mapJson = JSON.stringify(mapData).replaceAll('<', '\\u003c');
     const selectProject = (project: MapProject) => {
       showOverview(project);
       const city = data.cities.find((item) => item.id === project.cityId);
-      const coords = project.geometry?.coordinates[Math.floor(project.geometry.coordinates.length / 2)] ?? city?.coordinates;
+      const coords = project.geometry?.coordinates[Math.floor(project.geometry.coordinates.length / 2)] ?? project.routeProposal?.geometry.coordinates[Math.floor(project.routeProposal.geometry.coordinates.length / 2)] ?? city?.coordinates;
       if (coords) map.easeTo({ center: coords, zoom: 10.4, duration: reduceMotion ? 0 : 650 });
       render();
     };
@@ -141,7 +146,7 @@ const mapJson = JSON.stringify(mapData).replaceAll('<', '\\u003c');
       const state = data.states.find((item) => item.id === activeState);
       const city = data.cities.find((item) => item.id === activeCity);
       breadcrumb!.textContent = city ? `India / ${state?.name} / ${city.name}` : state ? `India / ${state.name}` : 'India overview';
-      if (mapNote) mapNote.textContent = city ? `${data.cityContext[activeCity]?.boundaryLabel ?? 'Approximate city extent'} · ${data.projects.some((project) => project.cityId === activeCity && project.geometry) ? 'route shapes shown with source limitations' : 'route alignment not verified'}` : 'Routes shown only where geometry is available';
+      if (mapNote) mapNote.textContent = city ? `${data.cityContext[activeCity]?.boundaryLabel ?? 'Approximate city extent'} · ${data.projects.some((project) => project.cityId === activeCity && project.routeProposal) ? 'dashed orange = unverified community proposal' : data.projects.some((project) => project.cityId === activeCity && project.geometry) ? 'reviewed route shapes shown with source limitations' : 'route alignment not verified'}` : 'Solid = reviewed; dashed orange = unverified proposal';
       if (mapReady) showCityContext();
       list!.replaceChildren();
       if (!activeState) {
@@ -156,7 +161,7 @@ const mapJson = JSON.stringify(mapData).replaceAll('<', '\\u003c');
         });
       } else {
         visible.filter((item) => item.cityId === activeCity).forEach((item) => {
-          const coords = item.geometry?.coordinates[Math.floor(item.geometry.coordinates.length / 2)] ?? city?.coordinates;
+          const coords = item.geometry?.coordinates[Math.floor(item.geometry.coordinates.length / 2)] ?? item.routeProposal?.geometry.coordinates[Math.floor(item.routeProposal.geometry.coordinates.length / 2)] ?? city?.coordinates;
           if (coords) addMarker(coords, `${item.name}, ${item.status?.replaceAll('-', ' ') ?? 'status unverified'}`, 'project', () => selectProject(item), () => showOverview(item));
           const button = document.createElement('button'); button.textContent = item.name; button.addEventListener('focus', () => showOverview(item)); button.addEventListener('mouseenter', () => showOverview(item)); button.addEventListener('click', () => selectProject(item)); list!.append(button);
         });
@@ -168,6 +173,8 @@ const mapJson = JSON.stringify(mapData).replaceAll('<', '\\u003c');
       if (map.getLayer('routes')) map.setFilter('routes', ['all', cityFilter, visibleFilter, ['!=', ['get', 'status'], 'approved']]);
       if (map.getLayer('planned-routes')) map.setFilter('planned-routes', ['all', cityFilter, visibleFilter, ['==', ['get', 'status'], 'approved']]);
       if (map.getLayer('route-hits')) map.setFilter('route-hits', ['all', cityFilter, visibleFilter]);
+      if (map.getLayer('proposal-routes')) map.setFilter('proposal-routes', ['all', cityFilter, visibleFilter]);
+      if (map.getLayer('proposal-hits')) map.setFilter('proposal-hits', ['all', cityFilter, visibleFilter]);
     };
     map.on('load', () => {
       map.addSource('india-boundary', { type: 'geojson', data: '/maps/india-boundary.geojson', attribution: '<a href="https://github.com/datameet/maps/tree/master/Country" target="_blank" rel="noopener noreferrer">Boundary: DataMeet (CC0)</a> · India official territorial depiction' });
@@ -177,9 +184,15 @@ const mapJson = JSON.stringify(mapData).replaceAll('<', '\\u003c');
       map.addLayer({ id: 'routes', type: 'line', source: 'routes', filter: ['!=', ['get', 'status'], 'approved'], paint: { 'line-color': ['get', 'colour'], 'line-width': 6, 'line-opacity': 0.9 } });
       map.addLayer({ id: 'planned-routes', type: 'line', source: 'routes', filter: ['==', ['get', 'status'], 'approved'], paint: { 'line-color': ['get', 'colour'], 'line-width': 5, 'line-opacity': 0.95, 'line-dasharray': [2, 2] } });
       map.addLayer({ id: 'route-hits', type: 'line', source: 'routes', paint: { 'line-color': '#000000', 'line-opacity': 0, 'line-width': 22 } });
+      map.addSource('proposals', { type: 'geojson', data: { type: 'FeatureCollection', features: data.projects.filter((project) => project.routeProposal).map((project) => ({ type: 'Feature', properties: { id: project.id, cityId: project.cityId }, geometry: project.routeProposal!.geometry })) } });
+      map.addLayer({ id: 'proposal-routes', type: 'line', source: 'proposals', paint: { 'line-color': '#cf793f', 'line-width': 5, 'line-opacity': 0.85, 'line-dasharray': [2, 2] } });
+      map.addLayer({ id: 'proposal-hits', type: 'line', source: 'proposals', paint: { 'line-color': '#000000', 'line-opacity': 0, 'line-width': 22 } });
       map.on('mouseenter', 'route-hits', (event: maplibregl.MapLayerMouseEvent) => { map.getCanvas().style.cursor = 'pointer'; const project = data.projects.find((item) => item.id === event.features?.[0]?.properties?.id); if (project) showOverview(project); });
       map.on('mouseleave', 'route-hits', () => { map.getCanvas().style.cursor = ''; });
       map.on('click', 'route-hits', (event: maplibregl.MapLayerMouseEvent) => { const project = data.projects.find((item) => item.id === event.features?.[0]?.properties?.id); if (project) selectProject(project); });
+      map.on('mouseenter', 'proposal-hits', (event: maplibregl.MapLayerMouseEvent) => { map.getCanvas().style.cursor = 'pointer'; const project = data.projects.find((item) => item.id === event.features?.[0]?.properties?.id); if (project) showOverview(project); });
+      map.on('mouseleave', 'proposal-hits', () => { map.getCanvas().style.cursor = ''; });
+      map.on('click', 'proposal-hits', (event: maplibregl.MapLayerMouseEvent) => { const project = data.projects.find((item) => item.id === event.features?.[0]?.properties?.id); if (project) selectProject(project); });
       mapReady = true;
       if (activeCity) selectCity(activeCity); else if (activeState) selectState(activeState); else render();
     });
@@ -191,3 +204,4 @@ const mapJson = JSON.stringify(mapData).replaceAll('<', '\\u003c');
     });
   });
 </script>
+<style>.legend-proposal{display:inline-block;width:18px;border-top:4px dashed #cf793f;margin-left:4px}</style>

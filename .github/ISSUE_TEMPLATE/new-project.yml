@@ -37,3 +37,14 @@ body:
     attributes:
       label: Optional route proposal or reference
       description: Paste GeoJSON from TrackYourInfra's route editor if you drew a line.
+  - type: dropdown
+    id: route_permission
+    attributes:
+      label: Permission to display a submitted route
+      description: A submitted line is shown as an unverified community proposal only if you created the points yourself and grant permission to publish them under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Do not trace a third-party map unless its terms allow this.
+      options:
+        - No route submitted
+        - I created these route points and license them under CC BY 4.0
+      default: 0
+    validations:
+      required: true

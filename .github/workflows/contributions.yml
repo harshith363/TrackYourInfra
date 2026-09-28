@@ -1,0 +1,126 @@
+name: Automated data contributions
+on:
+  issues:
+    types: [opened, edited, reopened]
+  pull_request_review:
+    types: [submitted]
+
+concurrency:
+  group: contribution-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: >-
+      github.event_name == 'issues' &&
+      contains(github.event.issue.body, '### Contribution type')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Generate data-only change from the issue form
+        id: contribution
+        env:
+          TRACKYOURINFRA_DATA_MODE: real
+        run: node --import tsx scripts/prepare-contribution.ts
+      - name: Validate exact proposed site and data
+        env:
+          TRACKYOURINFRA_DATA_MODE: real
+        run: |
+          npm run validate
+          npm test
+          npm run check
+          npm run build
+      - name: Create the generated PR and retire stale revisions
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.contribution.outputs.branch }}
+          BODY_PATH: ${{ steps.contribution.outputs.body_path }}
+          TITLE: ${{ steps.contribution.outputs.title }}
+          ISSUE_NUMBER: ${{ steps.contribution.outputs.issue_number }}
+        run: |
+          existing="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --head "$BRANCH" --json url --jq '.[0].url // empty')"
+          if [ -n "$existing" ]; then
+            echo "This exact issue revision already has a PR: $existing" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git switch -c "$BRANCH"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/projects data/sources data/changes.json
+          git commit -m "Generate data change for issue #${ISSUE_NUMBER}"
+          git push origin "$BRANCH"
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "$TITLE" --body-file "$BODY_PATH"
+          for stale in $(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefName --jq ".[] | select(.headRefName | startswith(\"automation/issue-${ISSUE_NUMBER}-\")) | select(.headRefName != \"${BRANCH}\") | .number"); do
+            gh pr close "$stale" --repo "$GITHUB_REPOSITORY" --comment 'Superseded by an edited issue; please review the newly generated PR.'
+          done
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Automated checks passed. Review the generated data PR linked above; a maintainer must verify its evidence and approve that exact commit."
+      - name: Explain a failed submission
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ERROR: ${{ steps.contribution.outputs.error }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -n "$ERROR" ]; then
+            gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Automated checks need a correction: $ERROR. Edit the issue form to retry. Details: $RUN_URL"
+          else
+            gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Automated checks could not prepare this contribution. Review the workflow result and edit the issue to retry: $RUN_URL"
+          fi
+
+  publish:
+    if: >-
+      github.event_name == 'pull_request_review' &&
+      github.event.review.state == 'approved' &&
+      startsWith(github.event.pull_request.head.ref, 'automation/issue-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Bind human approval to the unchanged issue and generated commit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node --import tsx scripts/verify-contribution-review.ts
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: true
+      - name: Repeat all checks before publication
+        env:
+          TRACKYOURINFRA_DATA_MODE: real
+        run: |
+          npm run validate
+          npm test
+          npm run check
+          npm run build
+      - name: Merge the approved data-only PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch --match-head-commit "$HEAD_SHA"

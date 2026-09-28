@@ -1,5 +1,7 @@
 # Issue to draft pull request automation
 
+> Historical description of the retired new-project-only workflow. The replacement is [automated data contributions](automated-contributions-spec.md). Its local implementation needs a live GitHub trial before being called operational.
+
 Status: First increment implemented locally; activate by merging the workflow into the default branch
 Date: 28 September 2026
 

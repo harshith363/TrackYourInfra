@@ -40,6 +40,8 @@ export function parseNewProjectIssue(body: string): Record<Field, string> {
       throw new Error(`Duplicate form field: ${heading}`);
     values.set(heading, section[2].trim());
   }
+  if (!values.has(headings.evidence) && values.has("Public source URL"))
+    values.set(headings.evidence, values.get("Public source URL")!);
   if (
     !Object.entries(headings)
       .filter(([key]) => key !== "routePermission")

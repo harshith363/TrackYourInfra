@@ -1,38 +1,81 @@
-name: Project update or correction
-description: Suggest a sourced change to an existing metro project.
+name: Project update
+description: Suggest one sourced change to an existing metro project. No code edits needed.
 title: "[Project update] "
 body:
   - type: markdown
     attributes:
-      value: "Reports are public. Please do not include private contact details. A report does not change the public record until a maintainer reviews a data pull request."
+      value: "One field per issue. The bot prepares data; a maintainer checks the evidence."
   - type: input
-    id: project
+    id: contribution-type
+    attributes: { label: Contribution type, value: Project update }
+    validations: { required: true }
+  - type: input
+    id: project-id
     attributes:
-      label: Project name or link
-      placeholder: "Project name or /projects/... link"
-    validations:
-      required: true
-  - type: input
+      {
+        label: Project ID,
+        description: "The ID at the end of the project URL, e.g. bengaluru-purple-line.",
+      }
+    validations: { required: true }
+  - type: dropdown
     id: field
     attributes:
-      label: What needs changing?
-      placeholder: "Status, target date, cost, milestone, source, or other"
-    validations:
-      required: true
-  - type: textarea
-    id: proposal
+      label: Field to update
+      options:
+        [
+          status,
+          routeLengthKm,
+          stationCount,
+          approvedCostCrore,
+          latestCostCrore,
+          originalTarget,
+          currentTarget,
+          progressPercent,
+          name,
+          scopeDescription,
+          summary,
+        ]
+    validations: { required: true }
+  - type: input
+    id: value
     attributes:
-      label: Proposed correction and explanation
-      description: Include the current value if known and explain the scope of the update.
-    validations:
-      required: true
+      {
+        label: New value (or Unknown),
+        description: "Dates use YYYY-MM-DD. Status uses the site's status values. Unknown clears a published value.",
+      }
+    validations: { required: true }
   - type: input
     id: as-of
+    attributes: { label: Claim as-of date, placeholder: YYYY-MM-DD }
+    validations: { required: true }
+  - type: dropdown
+    id: confidence
+    attributes: { label: Confidence, options: [high, medium, low] }
+    validations: { required: true }
+  - type: input
+    id: source-url
+    attributes: { label: Public source URL }
+    validations: { required: true }
+  - type: input
+    id: source-title
+    attributes: { label: Source title }
+    validations: { required: true }
+  - type: input
+    id: source-publisher
+    attributes: { label: Source publisher }
+    validations: { required: true }
+  - type: dropdown
+    id: source-type
+    attributes: { label: Source type, options: [primary, reporting, field] }
+    validations: { required: true }
+  - type: input
+    id: source-date
     attributes:
-      label: As-of or observation date
-      placeholder: "YYYY-MM-DD, or explain if unknown"
+      { label: Source publication date (optional), placeholder: YYYY-MM-DD }
+  - type: input
+    id: source-section
+    attributes: { label: Source section or page (optional) }
   - type: textarea
     id: evidence
-    attributes:
-      label: Public source links and relevant page or section
-      description: Reports without evidence can be triaged but cannot be accepted as facts.
+    attributes: { label: "What does this source establish?" }
+    validations: { required: true }

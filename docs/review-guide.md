@@ -1,14 +1,11 @@
-# Reviewing contributions
+# Reviewing data contributions
 
-TrackYourInfra accepts data only after a maintainer checks the scope, source, date, and proposed change. A GitHub report can be useful even before it has enough evidence to change a published fact.
+Every public data change has two stages: automated structural validation, then maintainer evidence approval. Contributors and maintainers do not manually edit JSON during the normal workflow. Read [the automation design](automated-contributions-spec.md) for scope and failure behavior.
 
-1. Triage the report: identify project or city, check duplicates, remove private details, and assign one review state.
-2. Compare the proposed fact with its cited source. Record the source page or section, publication date, applicable scope, and any disagreement with existing evidence.
-3. For geometry, check coordinate order, route direction, city association, declared precision, source permission, and whether a drawn line is only schematic. Compare visually with the accepted route.
-4. Request clarification, decline with a reason, or prepare a focused data PR linked to the issue.
-5. Run validation and review the generated site. Merge only when the change is supported and the PR checks pass.
-6. Close the report with the PR link or a concise explanation. A later correction adds a new change record; it does not erase the earlier decision.
+1. Open the issue, its public source, and the bot-generated PR. Confirm the source title, publisher, date, page/section, project scope, and proposed value. A URL merely existing is not evidence that the claim is true.
+2. Check that the PR changes exactly one project, one new source record, and the change-history entry. For a factual update, check the as-of date and confidence. For a map, inspect the route, city, coordinate order, precision, and license declaration. A community proposal may be published only as visibly unverified; an accepted alignment needs evidence supporting its exact path.
+3. If anything is missing or ambiguous, request an issue edit or decline with a reason. Editing an issue creates a new PR revision; do not approve the stale PR.
+4. If the exact generated PR commit and its evidence are acceptable, submit an **Approve** review on the PR. The bot rechecks that the issue is unchanged, the approver has maintainer permissions, the diff is data-only, and the real-data build passes before merging. Do not manually merge or alter generated files.
+5. Confirm the bot's merge and issue closure. A later correction is a new issue and history entry; do not silently rewrite the earlier decision.
 
-Initial report labels: `review:triage`, `review:needs-evidence`, `review:ready`, `review:in-progress`, `review:accepted`, `review:declined`, and `review:duplicate`. Use at most one at a time. Create the labels when configuring the public repository. New claims from direct field observations should describe exactly what was seen; they cannot establish an agency's official budget or total construction progress alone.
-
-With one maintainer, owner-authored changes should document a self-review and pass checks. Do not describe them as independently approved. The repository URL and maintainer handles must be configured before remote submissions and ownership rules can be activated.
+The owner may be the only maintainer initially. An owner approval in that case is not independent review; it is still an explicit evidence decision after automated checks. Website bug issues and code PRs use the developer workflow, not this data-publication gate. Production deployment is separate; a merged PR does not update an already-running local checkout.

@@ -1,40 +1,30 @@
-name: Map correction
-description: Submit a drawn route for an existing metro project. No code edits needed.
-title: "[Map correction] "
+name: Source addition or correction
+description: Add or correct a public source for an existing metro project. No code edits needed.
+title: "[Source] "
 body:
-  - type: markdown
-    attributes:
-      value: "Draw a route at /contribute/map/ and paste its GeoJSON. A community proposal remains unverified after publication."
   - type: input
     id: contribution-type
-    attributes: { label: Contribution type, value: Map correction }
+    attributes: { label: Contribution type, value: Source addition }
     validations: { required: true }
   - type: input
     id: project-id
     attributes: { label: Project ID }
     validations: { required: true }
   - type: dropdown
-    id: kind
+    id: source-action
     attributes:
       {
-        label: Map contribution kind,
-        options: [Unverified community proposal, Evidence-reviewed alignment],
+        label: Source action,
+        options: [Add new source, Correct existing source],
       }
     validations: { required: true }
-  - type: textarea
-    id: geojson
-    attributes: { label: Route editor GeoJSON, render: json }
-    validations: { required: true }
-  - type: dropdown
-    id: license
+  - type: input
+    id: existing-source-id
     attributes:
-      label: Route license declaration
-      options:
-        [
-          I cannot grant route publication permission,
-          I created these route points and license them under CC BY 4.0,
-        ]
-    validations: { required: true }
+      {
+        label: Existing source ID (for corrections),
+        description: "Find this in the source register on the project page. Leave blank when adding a source.",
+      }
   - type: input
     id: source-url
     attributes: { label: Public source URL }

@@ -8,6 +8,8 @@ Use the forms under GitHub Issues to report a project update, propose a metro pr
 
 For a route proposal, use `/contribute/map/` on the locally running site. Click or tap to place dots, export GeoJSON, then paste it into the map correction or new-project form. The line is an approximate proposal until reviewed.
 
+For a **New metro project** issue, a maintainer can add the `automation:prepare-draft-pr` label after initial triage. This prepares a linked draft pull request with a project file, provisional source records, and a change-history entry. Filing or editing an issue alone does not update the app. The draft leaves unverified facts and map geometry unset; a maintainer checks the sources, edits the PR, marks it ready, and merges it before the record can appear in a real-data build. Other issue forms still use the manual PR path.
+
 ## Edit data directly
 
 Fork the repository, make a focused change, and open a pull request. Include evidence and a before/after explanation for each factual change. Existing project IDs and slugs should remain stable. Unknown values should be `null`, not guesses or zeros. Only add geometry you can explain and source. Keep imported data under its original license and attribution.

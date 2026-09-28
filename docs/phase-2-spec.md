@@ -13,36 +13,34 @@ Keep operating costs low by continuing with Astro, TypeScript, local GeoJSON, an
 
 Phase 2 implements the contribution system and prepares the repository for community use. Website hosting, domain setup, production publishing, operational monitoring, and maintenance schedules remain Phase 3.
 
-Implementation note (28 September 2026): the route proposal editor, GitHub Issue Forms, contribution pages, per-record data loader, claim evidence checks, activity/history pages, and one source-backed Bengaluru pilot record are in place. Remaining Phase 2 work includes configuring the actual GitHub repository and maintainers, creating the suggested labels, enforcing factual-change history against the PR base in CI, and visual/accessibility review of the interactive editor. The descriptions below remain the intended acceptance criteria, not a claim that every item is complete.
+Implementation note (28 September 2026): the public repository is `harshith363/TrackYourInfra`. The route proposal editor, GitHub Issue Forms, contribution pages, per-record data loader, claim evidence checks, activity/history pages, and one source-backed Bengaluru pilot record are in place. The first issue-to-draft-PR workflow supports new-project issues only; it is active once merged to the default branch and the repository's Actions pull-request setting is enabled. Remaining Phase 2 work includes enforcing factual-change history against the PR base in CI and visual/accessibility review of the interactive editor. The descriptions below are intended acceptance criteria, not a claim that every item is complete.
 
 ## 2. Decisions and assumptions
 
-| Decision | Phase 2 design |
-| --- | --- |
-| Contribution channel | Confirmed: GitHub accounts and Issue Forms for reports; pull requests for data edits. |
-| Accounts | Public reading requires no account. Submitting through GitHub requires a GitHub account. No separate TrackYourInfra account system. |
-| Repository | One public repository; owner/name is configurable. No Git remote was configured at inspection. |
-| Initial moderation | Project owner acts as the initial maintainer; trusted geography reviewers can be added later. |
-| Publication authority | Maintainers merge reviewed changes. Reports and comments do not directly change project facts. |
-| Storage | Structured files in Git, with a static build. No database or continuously running application server. |
-| Language | English first. Store names as Unicode and avoid assumptions that prevent later regional languages. |
-| Costs | No paid service required by this design. Hosting and bandwidth budgets are settled in Phase 3. |
+| Decision              | Phase 2 design                                                                                                                      |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Contribution channel  | Confirmed: GitHub accounts and Issue Forms for reports; pull requests for data edits.                                               |
+| Accounts              | Public reading requires no account. Submitting through GitHub requires a GitHub account. No separate TrackYourInfra account system. |
+| Repository            | One public repository: `harshith363/TrackYourInfra`. The site reads the owner/name from configuration.                              |
+| Initial moderation    | Project owner acts as the initial maintainer; trusted geography reviewers can be added later.                                       |
+| Publication authority | Maintainers merge reviewed changes. Reports and comments do not directly change project facts.                                      |
+| Storage               | Structured files in Git, with a static build. No database or continuously running application server.                               |
+| Language              | English first. Store names as Unicode and avoid assumptions that prevent later regional languages.                                  |
+| Costs                 | No paid service required by this design. Hosting and bandwidth budgets are settled in Phase 3.                                      |
 
 If submissions without GitHub accounts are required, revisit the intake architecture before implementation: a form receiver, abuse controls, storage, and a moderation queue would need an owner and hosting decision. The rest of the data and review design can still be reused.
 
 ## 3. Current implementation and gaps
 
-The app has home, directory, state, city, project, and methodology pages. It uses Zod to validate project data, displays a national outline and city context layers, and exports project JSON. It currently holds three invented metro corridors, not verified real projects.
+The app has home, directory, state, city, project, contribution, activity, history, and methodology pages. It uses Zod to validate project data, separates demo fixtures from real data, displays the India outline and city context layers, and provides a route proposal editor. Real-data mode contains a source-backed Bengaluru Metro Phase 3 record; demo mode contains three invented corridors.
 
 The following gaps matter for Phase 2:
 
-- Contribution links currently explain a future workflow.
-- Most evidence is attached to the whole project; individual metric changes need their own evidence references.
-- Project and source records are held in shared array files, increasing editing conflicts as contributors join.
-- `updatedAt` does not distinguish an editorial change from an evidence review.
-- Map callouts currently interpolate data into HTML. Community-authored strings must be rendered safely before accepting external data.
-- The new city layers have passed build and geometry checks, but visual review is still outstanding. Some boundary dates and approximate area labels also await review.
-- The Phase 1 spec contains aspirations beyond the implemented app. This document does not certify every Phase 1 checklist item as complete.
+- New-project Issue Forms can prepare a data branch and draft PR after a maintainer applies the opt-in label; updates, map corrections, and bugs still require a manual PR. See [issue-to-draft-pr-automation.md](issue-to-draft-pr-automation.md).
+- CI validates builds and references, but does not yet compare changed factual fields with the PR base and require corresponding history entries.
+- Visual and accessibility review of the interactive route editor remains outstanding.
+- Some city-boundary dates and approximate area labels still need review.
+- The Phase 1 spec includes aspirations beyond the implemented app; this document does not certify every Phase 1 checklist item as complete.
 
 ## 4. User experience
 
@@ -84,15 +82,15 @@ The draft stays in the browser until the contributor submits it to GitHub; drawi
 
 ### New and updated site surfaces
 
-| Surface | Required experience |
-| --- | --- |
-| `/contribute` | Explain the workflow; offer update/correction, new project, map correction, and site bug routes. Link to open reports and the contributor guide. |
-| `/contribute/map` | City-scoped click/tap route drawing, visible numbered dots and draft line, point controls, source/precision fields, GeoJSON preview/export, and GitHub handoff. |
-| Project page | Suggest update, edit data, view open reports, view history, claim-specific sources, evidence as-of/review dates, and contributor credits where recorded. |
-| `/projects/[slug]/history` | Dated accepted changes showing field, old/new value, reason, evidence, and linked review issue or PR. |
-| `/activity` | Recent accepted data changes, generated from committed change entries. Does not pretend to be a live GitHub feed. |
-| `/methodology` | Publish evidence rules, lifecycle definitions, correction policy, date meanings, and geographic/source license information. |
-| Repository | Issue forms, PR template, contributor guide, conduct policy, review guide, and ownership configuration. |
+| Surface                    | Required experience                                                                                                                                             |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/contribute`              | Explain the workflow; offer update/correction, new project, map correction, and site bug routes. Link to open reports and the contributor guide.                |
+| `/contribute/map`          | City-scoped click/tap route drawing, visible numbered dots and draft line, point controls, source/precision fields, GeoJSON preview/export, and GitHub handoff. |
+| Project page               | Suggest update, edit data, view open reports, view history, claim-specific sources, evidence as-of/review dates, and contributor credits where recorded.        |
+| `/projects/[slug]/history` | Dated accepted changes showing field, old/new value, reason, evidence, and linked review issue or PR.                                                           |
+| `/activity`                | Recent accepted data changes, generated from committed change entries. Does not pretend to be a live GitHub feed.                                               |
+| `/methodology`             | Publish evidence rules, lifecycle definitions, correction policy, date meanings, and geographic/source license information.                                     |
+| Repository                 | Issue forms, PR template, contributor guide, conduct policy, review guide, and ownership configuration.                                                         |
 
 With no repository configured, local pages show an honest setup state and the contribution instructions. They must not link to a guessed repository or present an enabled action that cannot work. Avoid showing fabricated open issue counts or live review statuses.
 
@@ -107,9 +105,9 @@ Create four Issue Forms:
 
 Require enough structure to route a report; do not require a contributor to invent a value to pass the form. Evidence can be missing on intake, but this sends the report to `needs-evidence`.
 
-Suggested labels: `type:update`, `type:new-project`, `type:map`, `type:bug`; `review:triage`, `review:needs-evidence`, `review:ready`, `review:in-progress`, `review:accepted`, `review:declined`, `review:duplicate`. At most one review-state label at a time. Labels describe editorial review, independently of project lifecycle status.
+Suggested labels: `type:update`, `type:new-project`, `type:map`, `type:bug`; `review:triage`, `review:needs-evidence`, `review:ready`, `review:in-progress`, `review:accepted`, `review:declined`, `review:duplicate`; and `automation:prepare-draft-pr` for an explicit maintainer-triggered draft. At most one review-state label at a time. Labels describe editorial review, independently of project lifecycle status. The automation label must only be applied after a maintainer has reviewed the issue for readiness.
 
-Normal flow: triage → needs evidence or ready → linked PR/in progress → accepted after merge. Declined and duplicate reports close with reasons. An accepted report can be reopened if later evidence requires correction. Start with manual labels and links; no issue parser or automatic issue-to-data merge is needed.
+Normal flow: triage → needs evidence or ready → maintainer applies `automation:prepare-draft-pr` → generated draft PR → human review and merge → issue closed with the decision. Declined and duplicate reports close with reasons. An accepted report can be reopened if later evidence requires correction. The automation prepares candidate files on a draft branch; it never changes the default branch or publishes a record before a human-reviewed merge.
 
 Comments stay on GitHub. Do not add website comments, voting, reputation scores, personal profiles, or direct messaging in this phase. GitHub subscriptions provide contribution notifications.
 
@@ -152,17 +150,17 @@ A record represents a stated scope, such as a named metro line extension or a co
 
 Keep existing factual values on the project record and add a `claimEvidence` map keyed by supported field names. Each factual value must have its own supporting source IDs, an as-of date, confidence, and a short qualifier when needed. Supported keys initially cover lifecycle status, route length, station count, approved/latest cost, original/current target, and reported progress. Milestones and geometry carry their own evidence metadata.
 
-| Record/field | Required meaning |
-| --- | --- |
-| `recordKind` | `demonstration` or `real`; controls public presentation and validation. |
-| `updatedAt` | Date the accepted record changed. Does not mean the source was rechecked. |
-| Claim `asOf` | Date to which that claim applies; may be unknown if explicitly explained. |
-| Claim `reviewedAt` | Date a maintainer checked that claim against cited evidence. |
-| Claim `sourceIds` | One or more existing source IDs for each non-null factual metric/status. |
-| Claim `confidence` | Human evidence assessment with published definitions; not a numerical fact-check score. |
-| Geometry metadata | Source IDs, license, precision (`schematic`, `approximate`, `reviewed`), and review date. |
-| Source | Stable ID, title, publisher, URL, source type, publication date or null, access date, and relevant page/section. |
-| Change entry | Stable ID, project ID, date, author credit if opted in, reason, field-level before/after values, evidence IDs, and available issue/PR references. |
+| Record/field       | Required meaning                                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `recordKind`       | `demonstration` or `real`; controls public presentation and validation.                                                                           |
+| `updatedAt`        | Date the accepted record changed. Does not mean the source was rechecked.                                                                         |
+| Claim `asOf`       | Date to which that claim applies; may be unknown if explicitly explained.                                                                         |
+| Claim `reviewedAt` | Date a maintainer checked that claim against cited evidence.                                                                                      |
+| Claim `sourceIds`  | One or more existing source IDs for each non-null factual metric/status.                                                                          |
+| Claim `confidence` | Human evidence assessment with published definitions; not a numerical fact-check score.                                                           |
+| Geometry metadata  | Source IDs, license, precision (`schematic`, `approximate`, `reviewed`), and review date.                                                         |
+| Source             | Stable ID, title, publisher, URL, source type, publication date or null, access date, and relevant page/section.                                  |
+| Change entry       | Stable ID, project ID, date, author credit if opted in, reason, field-level before/after values, evidence IDs, and available issue/PR references. |
 
 For long documents, record a page/section and a brief explanation of what it supports. Link to documents rather than copying full articles or PDFs into the repository. Permit public HTTP(S) sources and validate URL schemes. Keep unsupported protocols out of generated links.
 

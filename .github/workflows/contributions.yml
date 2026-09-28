@@ -57,6 +57,7 @@ jobs:
             echo "This exact issue revision already has a PR: $existing" >> "$GITHUB_STEP_SUMMARY"
             sha="$(gh pr view "$existing" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq .headRefOid)"
             gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=contribution-validation -f description='Automated data and site checks passed' >/dev/null
+            gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=site -f description='Automated data and site checks passed' >/dev/null
             exit 0
           fi
           git switch -c "$BRANCH"
@@ -67,6 +68,7 @@ jobs:
           git push origin "$BRANCH"
           sha="$(git rev-parse HEAD)"
           gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=contribution-validation -f description='Automated data and site checks passed' >/dev/null
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=site -f description='Automated data and site checks passed' >/dev/null
           gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "$TITLE" --body-file "$BODY_PATH"
           for stale in $(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefName --jq ".[] | select(.headRefName | startswith(\"automation/issue-${ISSUE_NUMBER}-\")) | select(.headRefName != \"${BRANCH}\") | .number"); do
             gh pr close "$stale" --repo "$GITHUB_REPOSITORY" --comment 'Superseded by an edited issue; please review the newly generated PR.'
@@ -113,7 +115,7 @@ jobs:
         run: node --import tsx scripts/verify-contribution-review.ts
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
           persist-credentials: true
       - name: Repeat all checks before publication
         env:

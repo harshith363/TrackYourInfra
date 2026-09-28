@@ -20,6 +20,7 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+      statuses: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,6 +55,8 @@ jobs:
           existing="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --head "$BRANCH" --json url --jq '.[0].url // empty')"
           if [ -n "$existing" ]; then
             echo "This exact issue revision already has a PR: $existing" >> "$GITHUB_STEP_SUMMARY"
+            sha="$(gh pr view "$existing" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq .headRefOid)"
+            gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=contribution-validation -f description='Automated data and site checks passed' >/dev/null
             exit 0
           fi
           git switch -c "$BRANCH"
@@ -62,6 +65,8 @@ jobs:
           git add data/projects data/sources data/changes.json
           git commit -m "Generate data change for issue #${ISSUE_NUMBER}"
           git push origin "$BRANCH"
+          sha="$(git rev-parse HEAD)"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=contribution-validation -f description='Automated data and site checks passed' >/dev/null
           gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "$TITLE" --body-file "$BODY_PATH"
           for stale in $(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefName --jq ".[] | select(.headRefName | startswith(\"automation/issue-${ISSUE_NUMBER}-\")) | select(.headRefName != \"${BRANCH}\") | .number"); do
             gh pr close "$stale" --repo "$GITHUB_REPOSITORY" --comment 'Superseded by an edited issue; please review the newly generated PR.'

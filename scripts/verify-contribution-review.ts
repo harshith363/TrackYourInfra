@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { issueHash } from "../src/lib/data-contribution.ts";
+import { assertDataOnlyDiff } from "../src/lib/contribution-review.ts";
 
 const path = process.env.GITHUB_EVENT_PATH;
 const repository = process.env.GITHUB_REPOSITORY;
@@ -40,6 +41,10 @@ const match = pr.body.match(/^Issue: #(\d+)\nIssue SHA256: ([a-f0-9]{64})$/m);
 if (!match) throw new Error("PR is missing its issue revision marker.");
 const issueNumber = Number(match[1]);
 const hash = match[2];
+const kind = pr.body.match(
+  /^Contribution type: (new-project|project-update|source|source-correction|map)$/m,
+)?.[1];
+if (!kind) throw new Error("PR is missing its contribution type marker.");
 if (pr.head.ref !== `automation/issue-${issueNumber}-${hash.slice(0, 12)}`)
   throw new Error("PR branch does not match the issue revision.");
 const issue = await api(`issues/${issueNumber}`);
@@ -58,17 +63,5 @@ const permission = await api(`collaborators/${reviewer}/permission`);
 if (!["admin", "maintain", "write"].includes(permission.permission))
   throw new Error("Approval requires a maintainer with write access.");
 const files = await api(`pulls/${number}/files?per_page=100`);
-if (
-  !Array.isArray(files) ||
-  files.length !== 3 ||
-  files.some((file) => file.status !== "added" && file.status !== "modified") ||
-  !files.some((file) => file.filename === "data/changes.json") ||
-  !files.some((file) =>
-    /^data\/projects\/[a-z0-9-]+\.json$/.test(file.filename),
-  ) ||
-  !files.some((file) => /^data\/sources\/[a-z0-9-]+\.json$/.test(file.filename))
-)
-  throw new Error(
-    "PR must contain exactly one project, one source, and change history.",
-  );
+assertDataOnlyDiff(files, kind);
 console.log(`Verified maintainer approval of PR #${number} at ${pr.head.sha}.`);

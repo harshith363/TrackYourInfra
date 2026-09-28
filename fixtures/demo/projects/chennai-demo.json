@@ -1,0 +1,70 @@
+{
+  "id": "chennai-demo",
+  "slug": "chennai-demo-corridor",
+  "name": "Chennai demonstration corridor",
+  "line": "Illustrative Line C",
+  "stateId": "tamil-nadu",
+  "cityId": "chennai",
+  "agencyId": "demo-agency-tn",
+  "status": "approved",
+  "statusAsOf": "2026-09-27",
+  "confidence": "low",
+  "updatedAt": "2026-09-27",
+  "routeLengthKm": 15.6,
+  "stationCount": 11,
+  "approvedCostCrore": 6100,
+  "latestCostCrore": null,
+  "originalTarget": "2030-12-31",
+  "currentTarget": null,
+  "progressPercent": null,
+  "sourceIds": [
+    "demo-brief"
+  ],
+  "summary": "An illustrative approved route used to show how projects without construction progress are represented.",
+  "colour": "#d17f45",
+  "geometry": {
+    "type": "LineString",
+    "coordinates": [
+      [
+        80.212,
+        13.063
+      ],
+      [
+        80.235,
+        13.071
+      ],
+      [
+        80.259,
+        13.079
+      ],
+      [
+        80.281,
+        13.09
+      ],
+      [
+        80.302,
+        13.104
+      ]
+    ]
+  },
+  "stations": [
+    "West End",
+    "Museum",
+    "Central Link",
+    "East Gardens",
+    "Coast Road"
+  ],
+  "milestones": [
+    {
+      "id": "c-1",
+      "date": "2026-09-27",
+      "title": "Illustrative approval",
+      "description": "Example milestone for the approved lifecycle stage.",
+      "sourceId": "demo-brief",
+      "confidence": "low"
+    }
+  ],
+  "recordKind": "demonstration",
+  "infrastructureType": "metro",
+  "scopeDescription": "An illustrative approved route used to show how projects without construction progress are represented."
+}

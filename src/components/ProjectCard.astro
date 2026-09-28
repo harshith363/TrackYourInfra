@@ -9,6 +9,6 @@ const state = getState(project.stateId)!;
   <div class="card-top"><span class="eyebrow">{city.name} <span aria-hidden="true">/</span> {state.name}</span><span class={`status status-${project.status}`}>{statusLabel(project.status)}</span></div>
   <h3><a href={`/projects/${project.slug}/`}>{project.name}<span class="card-arrow" aria-hidden="true">↗</span></a></h3>
   <p>{project.summary}</p>
-  <div class="card-facts"><span><strong>{project.routeLengthKm} km</strong> route</span><span><strong>{project.stationCount}</strong> stations</span></div>
-  <div class="card-bottom"><span>As of {formatDate(project.statusAsOf)}</span><span class="source-mini">Demo data</span></div>
+  <div class="card-facts"><span><strong>{project.routeLengthKm === null ? 'Not reported' : `${project.routeLengthKm} km`}</strong> route</span><span><strong>{project.stationCount ?? 'Not reported'}</strong> stations</span></div>
+  <div class="card-bottom"><span>{project.statusAsOf ? `As of ${formatDate(project.statusAsOf)}` : 'Status date not verified'}</span><span class="source-mini">{project.recordKind === 'real' ? 'Source-backed' : 'Demo data'}</span></div>
 </article>

@@ -1,0 +1,37 @@
+{
+  "id": "bengaluru-metro-phase-3",
+  "slug": "bengaluru-metro-phase-3",
+  "name": "Bengaluru Metro Phase 3",
+  "line": "Two approved corridors",
+  "stateId": "karnataka",
+  "cityId": "bengaluru",
+  "agencyId": "bmrcl",
+  "recordKind": "real",
+  "infrastructureType": "metro",
+  "scopeDescription": "JP Nagar 4th Phase–Kempapura along Outer Ring Road West, and Hosahalli–Kadabagere along Magadi Road.",
+  "status": "under-construction",
+  "statusAsOf": null,
+  "confidence": "medium",
+  "updatedAt": "2026-09-28",
+  "routeLengthKm": 44.65,
+  "stationCount": 31,
+  "approvedCostCrore": 15611,
+  "latestCostCrore": null,
+  "originalTarget": null,
+  "currentTarget": null,
+  "progressPercent": null,
+  "sourceIds": ["bengaluru-phase3-cabinet", "bengaluru-phase3-bmrcl-policy"],
+  "summary": "Two corridors spanning 44.65 km and 31 stations. BMRCL describes Phase 3 as under construction; the publication date of that status statement is not established.",
+  "colour": "#277d68",
+  "geometry": null,
+  "claimEvidence": {
+    "status": {"sourceIds": ["bengaluru-phase3-bmrcl-policy"], "asOf": null, "reviewedAt": "2026-09-28", "confidence": "medium", "qualifier": "BMRCL calls it under construction, but the document's exact publication date is unclear."},
+    "routeLengthKm": {"sourceIds": ["bengaluru-phase3-cabinet", "bengaluru-phase3-bmrcl-policy"], "asOf": "2024-08-16", "reviewedAt": "2026-09-28", "confidence": "high"},
+    "stationCount": {"sourceIds": ["bengaluru-phase3-cabinet", "bengaluru-phase3-bmrcl-policy"], "asOf": "2024-08-16", "reviewedAt": "2026-09-28", "confidence": "medium", "qualifier": "The Cabinet release is internally inconsistent on the first corridor's sub-count; the 31-station total is corroborated by BMRCL."},
+    "approvedCostCrore": {"sourceIds": ["bengaluru-phase3-cabinet"], "asOf": "2024-08-16", "reviewedAt": "2026-09-28", "confidence": "high"}
+  },
+  "stations": [],
+  "milestones": [
+    {"id": "cabinet-approval", "date": "2024-08-16", "title": "Union Cabinet approval", "description": "Approval announced for two elevated corridors totalling 44.65 km.", "sourceId": "bengaluru-phase3-cabinet", "confidence": "high"}
+  ]
+}

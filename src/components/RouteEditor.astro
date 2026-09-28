@@ -1,0 +1,146 @@
+---
+import { data } from '../lib/data';
+import cityContext from '../../data/city-context.json';
+const { issueChooserUrl } = Astro.props as { issueChooserUrl: string | null };
+const editorData = {
+  cities: data.cities.map(({ id, name }) => ({ id, name })),
+  projects: data.projects.map(({ id, name, cityId, geometry }) => ({ id, name, cityId, geometry })),
+  cityContext,
+};
+const editorJson = JSON.stringify(editorData).replaceAll('<', '\\u003c');
+---
+<section class="shell route-editor" data-route-editor>
+  <div class="route-editor-controls">
+    <label>City<select data-editor-city>{editorData.cities.map((city) => <option value={city.id}>{city.name}</option>)}</select></label>
+    <label>Related project<select data-editor-project><option value="">New route proposal</option></select></label>
+    <label>Route precision<select data-editor-precision><option value="schematic">Schematic</option><option value="approximate">Approximate</option></select></label>
+  </div>
+  <div class="route-editor-layout">
+    <div class="route-editor-map" data-editor-map aria-label="Map for drawing an approximate route"></div>
+    <aside class="route-editor-panel">
+      <h2>Route points</h2><p>Click the map to add numbered dots. Each dot connects to the previous one. Use the fields below to add or adjust points by keyboard.</p>
+      <div class="route-editor-actions"><button type="button" data-editor-undo>Undo last</button><button type="button" data-editor-clear>Clear</button></div>
+      <ol data-editor-points class="route-editor-points"></ol>
+      <form data-editor-point-form class="route-point-form"><strong>Add a point by coordinates</strong><label>Longitude<input name="longitude" type="number" step="any" min="-180" max="180" required /></label><label>Latitude<input name="latitude" type="number" step="any" min="-90" max="90" required /></label><button type="submit">Add point</button></form>
+      <p class="route-editor-status" data-editor-status role="status" aria-live="polite">Place at least two dots to make a line.</p>
+    </aside>
+  </div>
+  <div class="route-editor-export"><div><h2>Share the proposal</h2><p>Include a source that supports the route. A line drawn here is approximate and does not change the accepted map.</p></div><label>Source URL<input data-editor-source type="url" inputmode="url" placeholder="https://…" /></label><label>Source or observation date<input data-editor-date type="date" /></label><label>GeoJSON proposal<textarea data-editor-geojson readonly aria-label="Copyable GeoJSON route proposal"></textarea></label><div class="route-editor-actions"><button type="button" data-editor-copy disabled>Copy route data</button><button type="button" data-editor-download disabled>Download GeoJSON</button>{issueChooserUrl ? <a class="button button-primary" href={issueChooserUrl} target="_blank" rel="noopener noreferrer">Open GitHub forms ↗</a> : <span class="contribution-setup">GitHub submission will be available after the public repository is connected.</span>}</div><p>Choose the map correction or new-project form on GitHub, then paste the GeoJSON and describe your evidence. Exporting alone does not submit a report.</p></div>
+  <script type="application/json" data-editor-data set:html={editorJson}></script>
+</section>
+<script>
+  import * as maplibregl from 'maplibre-gl';
+  import 'maplibre-gl/dist/maplibre-gl.css';
+  maplibregl.setWorkerUrl('/maplibre/maplibre-gl-worker.mjs');
+
+  type Point = [number, number];
+  type City = { id: string; name: string };
+  type Project = { id: string; name: string; cityId: string; geometry: { type: 'LineString'; coordinates: Point[] } | null };
+  type Context = { bounds: [Point, Point]; areas: { name: string; coordinates: Point }[] };
+  type EditorData = { cities: City[]; projects: Project[]; cityContext: Record<string, Context> };
+
+  document.querySelectorAll<HTMLElement>('[data-route-editor]').forEach((root) => {
+    const payload = root.querySelector<HTMLScriptElement>('[data-editor-data]');
+    const canvas = root.querySelector<HTMLElement>('[data-editor-map]');
+    const citySelect = root.querySelector<HTMLSelectElement>('[data-editor-city]');
+    const projectSelect = root.querySelector<HTMLSelectElement>('[data-editor-project]');
+    const precisionSelect = root.querySelector<HTMLSelectElement>('[data-editor-precision]');
+    const pointList = root.querySelector<HTMLOListElement>('[data-editor-points]');
+    const status = root.querySelector<HTMLElement>('[data-editor-status]');
+    const geojson = root.querySelector<HTMLTextAreaElement>('[data-editor-geojson]');
+    const sourceInput = root.querySelector<HTMLInputElement>('[data-editor-source]');
+    const dateInput = root.querySelector<HTMLInputElement>('[data-editor-date]');
+    const copyButton = root.querySelector<HTMLButtonElement>('[data-editor-copy]');
+    const downloadButton = root.querySelector<HTMLButtonElement>('[data-editor-download]');
+    const pointForm = root.querySelector<HTMLFormElement>('[data-editor-point-form]');
+    if (!payload || !canvas || !citySelect || !projectSelect || !precisionSelect || !pointList || !status || !geojson || !sourceInput || !dateInput || !copyButton || !downloadButton || !pointForm) return;
+    const editorData = JSON.parse(payload.textContent || '{}') as EditorData;
+    const params = new URLSearchParams(location.search);
+    const requestedProject = editorData.projects.find((project) => project.id === params.get('project'));
+    if (requestedProject) citySelect.value = requestedProject.cityId;
+    let points: Point[] = [];
+    let pointMarkers: maplibregl.Marker[] = [];
+    let areaMarkers: maplibregl.Marker[] = [];
+    const firstCity = editorData.cityContext[citySelect.value];
+    const map = new maplibregl.Map({ container: canvas, style: { version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#eaf0ed' } }] }, bounds: firstCity.bounds, fitBoundsOptions: { padding: 35, maxZoom: 10 }, minZoom: 6, maxZoom: 14, attributionControl: false });
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+
+    const featureCollection = (coords: Point[]): GeoJSON.FeatureCollection<GeoJSON.LineString> => ({ type: 'FeatureCollection', features: coords.length > 1 ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } }] : [] });
+    const inCity = (point: Point) => {
+      const [[west, south], [east, north]] = editorData.cityContext[citySelect.value].bounds;
+      return Number.isFinite(point[0]) && Number.isFinite(point[1]) && point[0] >= west && point[0] <= east && point[1] >= south && point[1] <= north;
+    };
+    const sourceUrl = () => {
+      const raw = sourceInput.value.trim();
+      if (!raw) return '';
+      try { const url = new URL(raw); return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null; } catch { return null; }
+    };
+    const buildProposal = () => ({ type: 'FeatureCollection', features: [{ type: 'Feature', properties: { cityId: citySelect.value, projectId: projectSelect.value || null, precision: precisionSelect.value, sourceUrl: sourceUrl() || null, sourceAsOf: dateInput.value || null, proposal: true }, geometry: { type: 'LineString', coordinates: points } }] });
+    const refreshProjects = () => {
+      projectSelect.replaceChildren(new Option('New route proposal', ''));
+      editorData.projects.filter((project) => project.cityId === citySelect.value).forEach((project) => projectSelect.add(new Option(project.name, project.id)));
+      if (requestedProject?.cityId === citySelect.value) projectSelect.value = requestedProject.id;
+    };
+    const refreshAccepted = () => {
+      const project = editorData.projects.find((item) => item.id === projectSelect.value);
+      (map.getSource('accepted-route') as maplibregl.GeoJSONSource).setData(featureCollection(project?.geometry?.coordinates ?? []));
+    };
+    const refreshCityContext = () => {
+      (map.getSource('city-outline') as maplibregl.GeoJSONSource).setData(`/maps/${citySelect.value}-outline.geojson`);
+      areaMarkers.forEach((marker) => marker.remove()); areaMarkers = [];
+      editorData.cityContext[citySelect.value].areas.forEach((area) => {
+        const label = document.createElement('span'); label.className = 'map-area-label'; label.textContent = area.name; label.setAttribute('aria-hidden', 'true');
+        areaMarkers.push(new maplibregl.Marker({ element: label }).setLngLat(area.coordinates).addTo(map));
+      });
+    };
+    const render = () => {
+      pointMarkers.forEach((marker) => marker.remove()); pointMarkers = [];
+      pointList.replaceChildren();
+      points.forEach((point, index) => {
+        const dot = document.createElement('span'); dot.className = 'route-draft-dot'; dot.textContent = String(index + 1); dot.setAttribute('aria-hidden', 'true');
+        pointMarkers.push(new maplibregl.Marker({ element: dot }).setLngLat(point).addTo(map));
+        const row = document.createElement('li');
+        const number = document.createElement('span'); number.textContent = `Point ${index + 1}`;
+        const lon = document.createElement('input'); lon.type = 'number'; lon.step = 'any'; lon.value = String(point[0]); lon.setAttribute('aria-label', `Point ${index + 1} longitude`);
+        const lat = document.createElement('input'); lat.type = 'number'; lat.step = 'any'; lat.value = String(point[1]); lat.setAttribute('aria-label', `Point ${index + 1} latitude`);
+        const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Remove'; remove.setAttribute('aria-label', `Remove point ${index + 1}`);
+        const update = () => { const next: Point = [Number(lon.value), Number(lat.value)]; if (!inCity(next)) { status.textContent = 'That point is outside the selected city extent.'; return; } points[index] = next; render(); };
+        lon.addEventListener('change', update); lat.addEventListener('change', update);
+        remove.addEventListener('click', () => { points.splice(index, 1); render(); });
+        row.append(number, lon, lat, remove); pointList.append(row);
+      });
+      const distinct = new Set(points.map((point) => point.join(','))).size;
+      const valid = points.length >= 2 && distinct >= 2 && Boolean(sourceUrl());
+      (map.getSource('draft-route') as maplibregl.GeoJSONSource | undefined)?.setData(featureCollection(points));
+      status.textContent = sourceUrl() === null ? 'Use an HTTP or HTTPS source URL.' : points.length >= 100 ? 'Point limit reached; remove a point to continue.' : points.length >= 2 && distinct >= 2 && !sourceUrl() ? 'Add a source URL to export this route proposal.' : valid ? `${points.length} connected dots. Review and export your proposal.` : 'Place at least two distinct dots to make a line.';
+      geojson.value = valid ? JSON.stringify(buildProposal(), null, 2) : '';
+      copyButton.disabled = !valid; downloadButton.disabled = !valid;
+    };
+    const addPoint = (point: Point) => { if (points.length >= 100) { status.textContent = 'This editor supports up to 100 dots.'; return; } if (!inCity(point)) { status.textContent = 'Choose a point within the selected city extent.'; return; } points.push(point.map((value) => Number(value.toFixed(5))) as Point); render(); };
+    refreshProjects();
+    map.on('load', () => {
+      map.addSource('city-outline', { type: 'geojson', data: `/maps/${citySelect.value}-outline.geojson`, attribution: '<a href="https://github.com/datameet/Municipal_Spatial_Data" target="_blank" rel="noopener noreferrer">City outline: DataMeet (CC BY-SA 2.5 India)</a>' });
+      map.addLayer({ id: 'city-fill', type: 'fill', source: 'city-outline', paint: { 'fill-color': '#f9fcf9', 'fill-opacity': 1 } });
+      map.addLayer({ id: 'city-border', type: 'line', source: 'city-outline', paint: { 'line-color': '#83a99d', 'line-width': 2, 'line-dasharray': [3, 2] } });
+      map.addSource('accepted-route', { type: 'geojson', data: featureCollection([]) });
+      map.addLayer({ id: 'accepted-route-line', type: 'line', source: 'accepted-route', paint: { 'line-color': '#899ca7', 'line-width': 4, 'line-dasharray': [2, 2] } });
+      map.addSource('draft-route', { type: 'geojson', data: featureCollection([]) });
+      map.addLayer({ id: 'draft-route-line', type: 'line', source: 'draft-route', paint: { 'line-color': '#176aab', 'line-width': 5 } });
+      refreshCityContext(); refreshAccepted(); render();
+      map.on('click', (event) => addPoint([event.lngLat.lng, event.lngLat.lat]));
+    });
+    citySelect.addEventListener('change', () => { points = []; refreshProjects(); const context = editorData.cityContext[citySelect.value]; if (map.getSource('city-outline')) { refreshCityContext(); refreshAccepted(); } map.fitBounds(context.bounds, { padding: 35, maxZoom: 10 }); render(); });
+    projectSelect.addEventListener('change', () => { if (map.getSource('accepted-route')) refreshAccepted(); });
+    pointForm.addEventListener('submit', (event) => { event.preventDefault(); const values = new FormData(pointForm); addPoint([Number(values.get('longitude')), Number(values.get('latitude'))]); pointForm.reset(); });
+    root.querySelector('[data-editor-undo]')?.addEventListener('click', () => { points.pop(); render(); });
+    root.querySelector('[data-editor-clear]')?.addEventListener('click', () => { points = []; render(); });
+    [sourceInput, dateInput, precisionSelect].forEach((control) => control.addEventListener('input', render));
+    copyButton.addEventListener('click', async () => { try { await navigator.clipboard.writeText(geojson.value); status.textContent = 'Route data copied. Paste it into the GitHub form.'; } catch { geojson.focus(); geojson.select(); status.textContent = 'Copy the selected route data, then paste it into the GitHub form.'; } });
+    downloadButton.addEventListener('click', () => { const url = URL.createObjectURL(new Blob([geojson.value], { type: 'application/geo+json' })); const link = document.createElement('a'); link.href = url; link.download = `${citySelect.value}-route-proposal.geojson`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); });
+  });
+</script>
+<style>
+  .route-editor{padding-bottom:95px}.route-editor-controls{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}.route-editor-controls label,.route-editor-export label{display:flex;flex-direction:column;gap:7px;color:#6b8385;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.route-editor input,.route-editor select,.route-editor textarea{min-height:40px;border:1px solid #cbdad6;border-radius:8px;background:#fff;color:#274450;padding:9px;font:inherit;letter-spacing:normal;text-transform:none}.route-editor-layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px}.route-editor-map{height:570px;border:1px solid #dce5e4;border-radius:14px;overflow:hidden}.route-editor-panel,.route-editor-export{background:#fff;border:1px solid #dce5e4;border-radius:13px;padding:20px}.route-editor-panel h2,.route-editor-export h2{margin:0 0 8px}.route-editor-panel p,.route-editor-export p{color:#667783;font-size:12px;line-height:1.6}.route-editor-actions{display:flex;flex-wrap:wrap;gap:9px;margin:15px 0}.route-editor-actions button,.route-point-form button,.route-editor-points button{border:1px solid #b9d1c9;border-radius:7px;background:#edf6f1;color:#1e6755;padding:8px 10px;font-size:11px;font-weight:800}.route-editor-actions button:disabled{opacity:.45;cursor:not-allowed}.route-editor-points{padding-left:18px;max-height:195px;overflow:auto}.route-editor-points li{display:grid;grid-template-columns:1fr 69px 69px auto;gap:4px;align-items:center;margin-bottom:6px;font-size:10px}.route-editor-points input{width:100%;min-height:32px;padding:5px;font-size:10px}.route-editor-points button{padding:6px;font-size:10px}.route-point-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}.route-point-form strong{grid-column:1/-1;font-size:11px}.route-point-form label{display:flex;flex-direction:column;gap:4px;font-size:10px}.route-point-form input{width:100%;min-height:34px}.route-point-form button{grid-column:1/-1}.route-editor-status{min-height:35px}.route-editor-export{margin-top:16px;display:grid;gap:12px}.route-editor-export textarea{height:155px;font-family:ui-monospace,monospace;font-size:11px}.contribution-setup{font-size:11px;color:#667783}@media(max-width:850px){.route-editor-layout{grid-template-columns:1fr}.route-editor-map{height:430px}.route-editor-panel{order:2}}@media(max-width:500px){.route-editor-map{height:360px}.route-editor-points li{grid-template-columns:1fr 65px 65px auto}}
+  :global(.route-draft-dot){width:24px;height:24px;display:grid;place-items:center;border:2px solid #fff;border-radius:50%;background:#176aab;color:#fff;font-size:10px;font-weight:800;box-shadow:0 2px 9px #24496055}
+</style>

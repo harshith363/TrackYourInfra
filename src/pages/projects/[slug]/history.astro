@@ -1,0 +1,15 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { data, formatDate } from '../../../lib/data';
+import { changesForProject } from '../../../lib/changes';
+export function getStaticPaths() { return data.projects.map((project) => ({ params: { slug: project.slug }, props: { project } })); }
+const { project } = Astro.props;
+const changes = changesForProject(project.id);
+---
+<Base title={`${project.name} history`} description={`Accepted changes to ${project.name}.`}>
+  <div class="shell page-intro"><nav class="breadcrumb" aria-label="Breadcrumb"><a href={`/projects/${project.slug}/`}>{project.name}</a><span>/</span><span>History</span></nav><div class="section-label">PROJECT HISTORY</div><h1>Accepted changes<em>.</em></h1><p>Every factual change listed here has been reviewed and committed. The repository retains the full file history.</p></div>
+  <section class="shell activity-list" aria-label="Accepted changes">
+    {changes.length === 0 ? <div class="empty-state">No reviewed changes have been published for this project yet. No accepted history has been recorded in this data mode.</div> : changes.map((change) => <article class="activity-item"><time datetime={change.date}>{formatDate(change.date)}</time><h2>{change.reason}</h2><dl>{change.fields.map((field) => <div><dt>{field.field}</dt><dd>{field.before ?? 'Unknown'} → {field.after ?? 'Unknown'}</dd></div>)}</dl>{change.pullRequestUrl && <a href={change.pullRequestUrl}>Review pull request ↗</a>}{change.issueUrl && <a href={change.issueUrl}>Original report ↗</a>}</article>)}
+  </section>
+</Base>
+<style>.activity-list{padding-bottom:100px}.activity-item{border-top:1px solid #dce5e4;padding:24px 0}.activity-item time{color:#4b9c83;font-size:11px;font-weight:800}.activity-item h2{font-size:22px}.activity-item dl>div{display:grid;grid-template-columns:170px 1fr;gap:20px;padding:9px 0;border-bottom:1px solid #e6edeb;font-size:12px}.activity-item dt{font-weight:800}.activity-item dd{margin:0;color:#667783}.activity-item a{margin-right:20px;color:#22856b;font-weight:800;font-size:12px}</style>

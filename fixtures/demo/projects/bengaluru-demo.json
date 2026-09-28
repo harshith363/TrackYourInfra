@@ -1,0 +1,83 @@
+{
+  "id": "bengaluru-demo",
+  "slug": "bengaluru-demo-corridor",
+  "name": "Bengaluru demonstration corridor",
+  "line": "Illustrative Line A",
+  "stateId": "karnataka",
+  "cityId": "bengaluru",
+  "agencyId": "demo-agency-ka",
+  "status": "under-construction",
+  "statusAsOf": "2026-09-27",
+  "confidence": "low",
+  "updatedAt": "2026-09-27",
+  "routeLengthKm": 18.4,
+  "stationCount": 12,
+  "approvedCostCrore": 8200,
+  "latestCostCrore": 9400,
+  "originalTarget": "2027-12-31",
+  "currentTarget": "2029-06-30",
+  "progressPercent": 42,
+  "sourceIds": [
+    "demo-brief"
+  ],
+  "summary": "An illustrative elevated corridor used to demonstrate how progress, cost changes and sources will be displayed.",
+  "colour": "#2d65d8",
+  "geometry": {
+    "type": "LineString",
+    "coordinates": [
+      [
+        77.544,
+        12.924
+      ],
+      [
+        77.558,
+        12.943
+      ],
+      [
+        77.578,
+        12.962
+      ],
+      [
+        77.595,
+        12.974
+      ],
+      [
+        77.615,
+        12.986
+      ],
+      [
+        77.637,
+        13.001
+      ]
+    ]
+  },
+  "stations": [
+    "South Gate",
+    "Market Square",
+    "Central Exchange",
+    "River Road",
+    "North Junction",
+    "Tech Park"
+  ],
+  "milestones": [
+    {
+      "id": "b-1",
+      "date": "2026-05-12",
+      "title": "Illustrative construction update",
+      "description": "Example milestone showing how field progress might appear.",
+      "sourceId": "demo-brief",
+      "confidence": "low"
+    },
+    {
+      "id": "b-2",
+      "date": "2026-09-27",
+      "title": "Target date revised",
+      "description": "Example change to the planned completion date.",
+      "sourceId": "demo-brief",
+      "confidence": "low"
+    }
+  ],
+  "recordKind": "demonstration",
+  "infrastructureType": "metro",
+  "scopeDescription": "An illustrative elevated corridor used to demonstrate how progress, cost changes and sources will be displayed."
+}

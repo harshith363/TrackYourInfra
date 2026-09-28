@@ -23,14 +23,16 @@ const { title = 'TrackYourInfra', description = 'Explore public infrastructure p
         <nav class="main-nav" aria-label="Main navigation">
           <a href="/" aria-current={Astro.url.pathname === '/' ? 'page' : undefined}>Explore</a>
           <a href="/projects" aria-current={Astro.url.pathname.startsWith('/projects') ? 'page' : undefined}>Projects</a>
+          <a href="/contribute/" aria-current={Astro.url.pathname.startsWith('/contribute') ? 'page' : undefined}>Contribute</a>
+          <a href="/activity/" aria-current={Astro.url.pathname === '/activity/' ? 'page' : undefined}>Activity</a>
           <a href="/methodology" aria-current={Astro.url.pathname === '/methodology/' ? 'page' : undefined}>Methodology</a>
         </nav>
-        <a class="header-link" href="/methodology/#contribute">Contribute <span aria-hidden="true">↗</span></a>
+        <a class="header-link" href="/contribute/">Draw a route <span aria-hidden="true">↗</span></a>
       </div>
     </header>
     <main id="main"><slot /></main>
     <footer class="site-footer">
-      <div class="shell footer-inner"><div><a class="brand footer-brand" href="/">TrackYourInfra</a><p>Public infrastructure, in the open.</p></div><div class="footer-links"><a href="/projects">Projects</a><a href="/data/projects.json">JSON data</a><a href="/methodology">Methodology</a><a href="/methodology/#demonstration-data">Data note</a></div><p class="footer-note">Phase 1 prototype · Demonstration data</p></div>
+      <div class="shell footer-inner"><div><a class="brand footer-brand" href="/">TrackYourInfra</a><p>Public infrastructure, in the open.</p></div><div class="footer-links"><a href="/projects">Projects</a><a href="/contribute/">Contribute</a><a href="/activity/">Activity</a><a href="/data/projects.json">JSON data</a><a href="/methodology">Methodology</a><a href="/methodology/#demonstration-data">Data note</a></div><p class="footer-note">Prototype · Demonstration data</p></div>
     </footer>
   </body>
 </html>

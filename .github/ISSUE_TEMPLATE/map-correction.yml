@@ -1,0 +1,34 @@
+name: Map or location correction
+description: Propose a route, location, or boundary change.
+title: "[Map correction] "
+body:
+  - type: markdown
+    attributes:
+      value: "Use the route editor at /contribute/map/ to draw a line. Copy its GeoJSON below. Drawn lines are proposals, not surveyed alignments."
+  - type: input
+    id: project
+    attributes:
+      label: Project or city
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong, and what should change?
+    validations:
+      required: true
+  - type: textarea
+    id: geometry
+    attributes:
+      label: Proposed GeoJSON or map reference
+      description: Paste the route editor export or a public map reference.
+  - type: input
+    id: as-of
+    attributes:
+      label: Source or observation date
+      placeholder: "YYYY-MM-DD, or explain if unknown"
+  - type: textarea
+    id: source
+    attributes:
+      label: Source and permission or license information
+      description: Explain how the source supports the geometry and whether it may be reused.

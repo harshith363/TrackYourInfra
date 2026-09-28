@@ -1,0 +1,39 @@
+name: New metro project
+description: Propose a metro project for the public record.
+title: "[New metro project] "
+body:
+  - type: markdown
+    attributes:
+      value: "Reports are public. Submit only sources you can link to publicly. Unknown costs, dates, and routes are fine."
+  - type: input
+    id: name
+    attributes:
+      label: Project name and phase or line
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: City and state or Union Territory
+    validations:
+      required: true
+  - type: input
+    id: agency
+    attributes:
+      label: Responsible agency, if known
+  - type: textarea
+    id: scope
+    attributes:
+      label: What does this project record cover?
+      description: Describe the exact line, extension, or construction phase.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Public source links and relevant page or section
+  - type: textarea
+    id: route
+    attributes:
+      label: Optional route proposal or reference
+      description: Paste GeoJSON from TrackYourInfra's route editor if you drew a line.

@@ -1,0 +1,35 @@
+{
+  "bengaluru": {
+    "bounds": [[77.45988, 12.83349], [77.78436, 13.14262]],
+    "boundaryLabel": "BBMP ward extent (2022 source)",
+    "areas": [
+      { "name": "Yelahanka", "coordinates": [77.597, 13.101] },
+      { "name": "Malleshwaram", "coordinates": [77.57, 13.006] },
+      { "name": "Indiranagar", "coordinates": [77.64, 12.978] },
+      { "name": "Jayanagar", "coordinates": [77.583, 12.925] },
+      { "name": "Koramangala", "coordinates": [77.625, 12.936] }
+    ]
+  },
+  "mumbai": {
+    "bounds": [[72.77633, 18.89396], [72.97973, 19.27018]],
+    "boundaryLabel": "BMC ward extent (source date unverified)",
+    "areas": [
+      { "name": "Borivali", "coordinates": [72.856, 19.23] },
+      { "name": "Andheri", "coordinates": [72.869, 19.119] },
+      { "name": "Bandra", "coordinates": [72.84, 19.059] },
+      { "name": "Dadar", "coordinates": [72.842, 19.018] },
+      { "name": "Colaba", "coordinates": [72.83, 18.915] }
+    ]
+  },
+  "chennai": {
+    "bounds": [[80.14018, 12.85197], [80.33122, 13.23519]],
+    "boundaryLabel": "Municipal zones extent (source date unverified)",
+    "areas": [
+      { "name": "Royapuram", "coordinates": [80.29, 13.113] },
+      { "name": "Anna Nagar", "coordinates": [80.208, 13.085] },
+      { "name": "Nungambakkam", "coordinates": [80.243, 13.06] },
+      { "name": "Adyar", "coordinates": [80.256, 13.006] },
+      { "name": "Velachery", "coordinates": [80.221, 12.979] }
+    ]
+  }
+}

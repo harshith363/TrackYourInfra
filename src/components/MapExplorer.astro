@@ -1,23 +1,26 @@
 ---
-import { data } from '../lib/data';
+import { data, dataMode } from '../lib/data';
+import cityContext from '../../data/city-context.json';
 const { initialState, initialCity, compact = false } = Astro.props as { initialState?: string; initialCity?: string; compact?: boolean };
 const mapData = {
   states: data.states,
   cities: data.cities,
+  cityContext,
   projects: data.projects.map(({ id, slug, name, cityId, stateId, status, statusAsOf, routeLengthKm, summary, colour, geometry }) => ({ id, slug, name, cityId, stateId, status, statusAsOf, routeLengthKm, summary, colour, geometry })),
 };
+const mapJson = JSON.stringify(mapData).replaceAll('<', '\\u003c');
 ---
 <section class:list={['map-explorer', compact && 'map-compact']} aria-label="Infrastructure map" data-map-explorer data-initial-state={initialState ?? ''} data-initial-city={initialCity ?? ''}>
   <div class="map-toolbar">
     <div class="map-level"><span class="map-spark" aria-hidden="true">✦</span><span data-map-breadcrumb>India overview</span></div>
     <button class="map-reset" type="button" data-map-reset>Reset map <span aria-hidden="true">↺</span></button>
   </div>
-  <div class="map-canvas" data-map-canvas role="img" aria-label="Interactive map of demonstration metro corridors in India"></div>
+  <div class="map-canvas" data-map-canvas role="img" aria-label="Interactive map of tracked metro projects in India"></div>
   <div class="map-filters"><label><span class="sr-only">Search map locations and projects</span><input type="search" placeholder="Find a place or project" data-map-search /></label><label><span class="sr-only">Filter map by project status</span><select data-map-status><option value="">All statuses</option><option value="approved">Approved</option><option value="under-construction">Under construction</option><option value="partially-operational">Partially operational</option></select></label></div>
   <div class="map-callout" data-map-callout hidden></div>
   <div class="map-guide"><span class="legend-dot"></span> City / project <span class="legend-line"></span> Route corridor <span class="legend-dash"></span> Planned</div>
-  <div class="map-overlay-note">Illustrative corridors · not surveyed alignments</div>
-  <script type="application/json" data-map-data set:html={JSON.stringify(mapData)}></script>
+  <div class="map-overlay-note" data-map-note>{dataMode === 'demo' ? 'Illustrative corridors · not surveyed alignments' : 'Routes appear only after evidence review'}</div>
+  <script type="application/json" data-map-data set:html={mapJson}></script>
   <div class="map-accessible-list" aria-label="Map locations">
     <h3>Explore by location</h3>
     <div class="map-location-buttons" data-map-list>
@@ -32,8 +35,9 @@ const mapData = {
 
   type MapState = { id: string; name: string; center: [number, number]; zoom: number };
   type MapCity = { id: string; name: string; stateId: string; coordinates: [number, number] };
-  type MapProject = { id: string; slug: string; name: string; cityId: string; stateId: string; status: string; statusAsOf: string; routeLengthKm: number; summary: string; colour: string; geometry: { type: 'LineString'; coordinates: [number, number][] } };
-  type MapData = { states: MapState[]; cities: MapCity[]; projects: MapProject[] };
+  type MapProject = { id: string; slug: string; name: string; cityId: string; stateId: string; status: string | null; statusAsOf: string | null; routeLengthKm: number | null; summary: string; colour: string; geometry: { type: 'LineString'; coordinates: [number, number][] } | null };
+  type CityContext = { bounds: [[number, number], [number, number]]; boundaryLabel: string; areas: { name: string; coordinates: [number, number] }[] };
+  type MapData = { states: MapState[]; cities: MapCity[]; cityContext: Record<string, CityContext>; projects: MapProject[] };
 
   document.querySelectorAll<HTMLElement>('[data-map-explorer]').forEach((root) => {
     const payload = root.querySelector<HTMLScriptElement>('[data-map-data]');
@@ -43,16 +47,50 @@ const mapData = {
     const list = root.querySelector<HTMLElement>('[data-map-list]');
     const search = root.querySelector<HTMLInputElement>('[data-map-search]');
     const status = root.querySelector<HTMLSelectElement>('[data-map-status]');
+    const mapNote = root.querySelector<HTMLElement>('[data-map-note]');
     if (!payload || !canvas || !callout || !breadcrumb || !list) return;
     const data = JSON.parse(payload.textContent || '{}') as MapData;
     let activeState = root.dataset.initialState || '';
     let activeCity = root.dataset.initialCity || '';
     let markers: maplibregl.Marker[] = [];
+    let areaMarkers: maplibregl.Marker[] = [];
+    let mapReady = false;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const map = new maplibregl.Map({ container: canvas, style: { version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#eaf0ed' } }] }, center: [79.6, 21.1], zoom: 3.7, minZoom: 3, maxZoom: 13, attributionControl: false });
+    const indiaBounds: maplibregl.LngLatBoundsLike = [[68.16438, 6.75292], [97.39536, 37.09759]];
+    const overviewOptions = { padding: { top: 135, bottom: 55, left: 30, right: 30 }, maxZoom: 4 };
+    const map = new maplibregl.Map({ container: canvas, style: { version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#eaf0ed' } }] }, bounds: indiaBounds, fitBoundsOptions: overviewOptions, minZoom: 1, maxZoom: 13, attributionControl: false });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
     const clearMarkers = () => { markers.forEach((marker) => marker.remove()); markers = []; };
+    const clearAreaMarkers = () => { areaMarkers.forEach((marker) => marker.remove()); areaMarkers = []; };
+    const syncAreaVisibility = () => { areaMarkers.forEach((marker) => { marker.getElement().hidden = map.getZoom() < 8.8; }); };
+    const showCityContext = () => {
+      clearAreaMarkers();
+      for (const cityId of Object.keys(data.cityContext)) {
+        for (const suffix of ['fill', 'border']) {
+          const layer = map.getLayer(`city-${cityId}-${suffix}`);
+          if (layer) map.setLayoutProperty(layer.id, 'visibility', cityId === activeCity ? 'visible' : 'none');
+        }
+      }
+      const context = data.cityContext[activeCity];
+      if (!context) return;
+      const sourceId = `city-${activeCity}`;
+      if (!map.getSource(sourceId)) {
+        const cityUrl = `https://github.com/datameet/Municipal_Spatial_Data/tree/master/${activeCity === 'bengaluru' ? 'Bangalore' : activeCity === 'mumbai' ? 'Mumbai' : 'Chennai'}`;
+        map.addSource(sourceId, { type: 'geojson', data: `/maps/${activeCity}-outline.geojson`, attribution: `<a href="${cityUrl}" target="_blank" rel="noopener noreferrer">City boundary: DataMeet (CC BY-SA 2.5 India)</a>` });
+        map.addLayer({ id: `${sourceId}-fill`, type: 'fill', source: sourceId, minzoom: 8.8, paint: { 'fill-color': '#abddc8', 'fill-opacity': 0.13 } }, 'routes');
+        map.addLayer({ id: `${sourceId}-border`, type: 'line', source: sourceId, minzoom: 8.8, paint: { 'line-color': '#5f9c8c', 'line-width': 2, 'line-opacity': 0.8, 'line-dasharray': [3, 2] } }, 'routes');
+      }
+      context.areas.forEach((area) => {
+        const label = document.createElement('span');
+        label.className = 'map-area-label';
+        label.textContent = area.name;
+        label.title = `${area.name} · approximate location`;
+        areaMarkers.push(new maplibregl.Marker({ element: label, anchor: 'center' }).setLngLat(area.coordinates).addTo(map));
+      });
+      syncAreaVisibility();
+    };
+    map.on('zoom', syncAreaVisibility);
     const matchingProjects = () => data.projects.filter((project) => {
       const city = data.cities.find((item) => item.id === project.cityId);
       const state = data.states.find((item) => item.id === project.stateId);
@@ -63,7 +101,15 @@ const mapData = {
     const showOverview = (project: MapProject) => {
       const city = data.cities.find((item) => item.id === project.cityId);
       callout!.hidden = false;
-      callout!.innerHTML = `<div class="callout-kicker">${city?.name ?? ''} · Demonstration data</div><h3>${project.name}</h3><p>${project.summary}</p><div class="callout-meta"><span>${project.status.replaceAll('-', ' ')}</span><span>${project.routeLengthKm} km</span></div><a href="/projects/${project.slug}/">View project <span aria-hidden="true">↗</span></a>`;
+      const kicker = document.createElement('div'); kicker.className = 'callout-kicker'; kicker.textContent = `${city?.name ?? ''} · ${project.geometry ? 'Mapped corridor' : 'Route not mapped'}`;
+      const heading = document.createElement('h3'); heading.textContent = project.name;
+      const summary = document.createElement('p'); summary.textContent = project.summary;
+      const meta = document.createElement('div'); meta.className = 'callout-meta';
+      const statusLabel = document.createElement('span'); statusLabel.textContent = project.status?.replaceAll('-', ' ') ?? 'not verified';
+      const lengthLabel = document.createElement('span'); lengthLabel.textContent = project.routeLengthKm === null ? 'Length not reported' : `${project.routeLengthKm} km`;
+      meta.append(statusLabel, lengthLabel);
+      const link = document.createElement('a'); link.href = `/projects/${encodeURIComponent(project.slug)}/`; link.textContent = 'View project ↗';
+      callout!.replaceChildren(kicker, heading, summary, meta, link);
     };
     const addMarker = (coordinates: [number, number], label: string, kind: string, action: () => void, preview?: () => void) => {
       const button = document.createElement('button');
@@ -74,7 +120,9 @@ const mapData = {
     };
     const selectProject = (project: MapProject) => {
       showOverview(project);
-      map.easeTo({ center: project.geometry.coordinates[Math.floor(project.geometry.coordinates.length / 2)], zoom: 10.4, duration: reduceMotion ? 0 : 650 });
+      const city = data.cities.find((item) => item.id === project.cityId);
+      const coords = project.geometry?.coordinates[Math.floor(project.geometry.coordinates.length / 2)] ?? city?.coordinates;
+      if (coords) map.easeTo({ center: coords, zoom: 10.4, duration: reduceMotion ? 0 : 650 });
       render();
     };
     const selectCity = (id: string) => {
@@ -93,6 +141,8 @@ const mapData = {
       const state = data.states.find((item) => item.id === activeState);
       const city = data.cities.find((item) => item.id === activeCity);
       breadcrumb!.textContent = city ? `India / ${state?.name} / ${city.name}` : state ? `India / ${state.name}` : 'India overview';
+      if (mapNote) mapNote.textContent = city ? `${data.cityContext[activeCity]?.boundaryLabel ?? 'Approximate city extent'} · ${data.projects.some((project) => project.cityId === activeCity && project.geometry) ? 'route shapes shown with source limitations' : 'route alignment not verified'}` : 'Routes shown only where geometry is available';
+      if (mapReady) showCityContext();
       list!.replaceChildren();
       if (!activeState) {
         data.states.filter((item) => visible.some((project) => project.stateId === item.id)).forEach((item) => {
@@ -106,8 +156,8 @@ const mapData = {
         });
       } else {
         visible.filter((item) => item.cityId === activeCity).forEach((item) => {
-          const coords = item.geometry.coordinates[Math.floor(item.geometry.coordinates.length / 2)];
-          addMarker(coords, `${item.name}, ${item.status.replaceAll('-', ' ')}`, 'project', () => selectProject(item), () => showOverview(item));
+          const coords = item.geometry?.coordinates[Math.floor(item.geometry.coordinates.length / 2)] ?? city?.coordinates;
+          if (coords) addMarker(coords, `${item.name}, ${item.status?.replaceAll('-', ' ') ?? 'status unverified'}`, 'project', () => selectProject(item), () => showOverview(item));
           const button = document.createElement('button'); button.textContent = item.name; button.addEventListener('focus', () => showOverview(item)); button.addEventListener('mouseenter', () => showOverview(item)); button.addEventListener('click', () => selectProject(item)); list!.append(button);
         });
       }
@@ -120,19 +170,20 @@ const mapData = {
       if (map.getLayer('route-hits')) map.setFilter('route-hits', ['all', cityFilter, visibleFilter]);
     };
     map.on('load', () => {
-      map.addSource('india-schematic', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[68.1,23.7],[69.0,22.0],[70.2,22.2],[71.0,20.7],[72.2,19.3],[72.7,17.1],[73.7,15.2],[74.2,13.2],[76.1,10.2],[77.5,8.2],[78.5,9.0],[79.6,10.2],[80.3,13.0],[81.2,15.6],[82.2,17.6],[83.9,18.9],[85.1,19.9],[86.6,20.2],[87.6,21.7],[88.1,22.1],[88.0,24.2],[89.3,25.3],[91.0,25.6],[92.1,24.8],[93.4,25.3],[94.6,27.4],[95.5,28.1],[96.9,27.8],[97.4,28.4],[95.4,29.4],[93.8,29.9],[92.0,28.8],[90.6,27.7],[88.8,27.5],[87.4,27.7],[86.4,28.2],[84.6,29.2],[82.2,30.6],[80.3,30.9],[79.6,32.2],[78.7,32.6],[77.7,35.3],[75.8,34.7],[74.2,34.0],[73.6,32.1],[72.3,30.0],[70.3,28.0],[69.1,26.3],[68.1,23.7]]] } } });
-      map.addLayer({ id: 'india-fill', type: 'fill', source: 'india-schematic', paint: { 'fill-color': '#f8fbf8', 'fill-opacity': 0.96 } });
-      map.addLayer({ id: 'india-border', type: 'line', source: 'india-schematic', paint: { 'line-color': '#bdd0ca', 'line-width': 1.5 } });
-      map.addSource('routes', { type: 'geojson', data: { type: 'FeatureCollection', features: data.projects.map((project) => ({ type: 'Feature', properties: { id: project.id, cityId: project.cityId, colour: project.colour, status: project.status }, geometry: project.geometry })) } });
+      map.addSource('india-boundary', { type: 'geojson', data: '/maps/india-boundary.geojson', attribution: '<a href="https://github.com/datameet/maps/tree/master/Country" target="_blank" rel="noopener noreferrer">Boundary: DataMeet (CC0)</a> · India official territorial depiction' });
+      map.addLayer({ id: 'india-fill', type: 'fill', source: 'india-boundary', paint: { 'fill-color': '#f8fbf8', 'fill-opacity': 0.96 } });
+      map.addLayer({ id: 'india-border', type: 'line', source: 'india-boundary', paint: { 'line-color': '#bdd0ca', 'line-width': 1.5 } });
+      map.addSource('routes', { type: 'geojson', data: { type: 'FeatureCollection', features: data.projects.filter((project) => project.geometry).map((project) => ({ type: 'Feature', properties: { id: project.id, cityId: project.cityId, colour: project.colour, status: project.status }, geometry: project.geometry! })) } });
       map.addLayer({ id: 'routes', type: 'line', source: 'routes', filter: ['!=', ['get', 'status'], 'approved'], paint: { 'line-color': ['get', 'colour'], 'line-width': 6, 'line-opacity': 0.9 } });
       map.addLayer({ id: 'planned-routes', type: 'line', source: 'routes', filter: ['==', ['get', 'status'], 'approved'], paint: { 'line-color': ['get', 'colour'], 'line-width': 5, 'line-opacity': 0.95, 'line-dasharray': [2, 2] } });
       map.addLayer({ id: 'route-hits', type: 'line', source: 'routes', paint: { 'line-color': '#000000', 'line-opacity': 0, 'line-width': 22 } });
       map.on('mouseenter', 'route-hits', (event: maplibregl.MapLayerMouseEvent) => { map.getCanvas().style.cursor = 'pointer'; const project = data.projects.find((item) => item.id === event.features?.[0]?.properties?.id); if (project) showOverview(project); });
       map.on('mouseleave', 'route-hits', () => { map.getCanvas().style.cursor = ''; });
       map.on('click', 'route-hits', (event: maplibregl.MapLayerMouseEvent) => { const project = data.projects.find((item) => item.id === event.features?.[0]?.properties?.id); if (project) selectProject(project); });
+      mapReady = true;
       if (activeCity) selectCity(activeCity); else if (activeState) selectState(activeState); else render();
     });
-    root.querySelector('[data-map-reset]')?.addEventListener('click', () => { activeState = ''; activeCity = ''; callout.hidden = true; map.easeTo({ center: [79.6, 21.1], zoom: 3.7, duration: reduceMotion ? 0 : 650 }); render(); });
+    root.querySelector('[data-map-reset]')?.addEventListener('click', () => { activeState = ''; activeCity = ''; callout.hidden = true; map.fitBounds(indiaBounds, { ...overviewOptions, duration: reduceMotion ? 0 : 650 }); render(); });
     [search, status].forEach((control) => control?.addEventListener('input', () => { callout.hidden = true; render(); }));
     window.addEventListener('trackyourinfra:filter', (event) => {
       const detail = (event as CustomEvent<{ state?: string; city?: string }>).detail;

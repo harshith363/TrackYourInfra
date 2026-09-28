@@ -1,0 +1,83 @@
+{
+  "id": "mumbai-demo",
+  "slug": "mumbai-demo-corridor",
+  "name": "Mumbai demonstration corridor",
+  "line": "Illustrative Line B",
+  "stateId": "maharashtra",
+  "cityId": "mumbai",
+  "agencyId": "demo-agency-mh",
+  "status": "partially-operational",
+  "statusAsOf": "2026-09-27",
+  "confidence": "low",
+  "updatedAt": "2026-09-27",
+  "routeLengthKm": 24.2,
+  "stationCount": 16,
+  "approvedCostCrore": 12700,
+  "latestCostCrore": 12700,
+  "originalTarget": "2027-03-31",
+  "currentTarget": "2027-12-31",
+  "progressPercent": 73,
+  "sourceIds": [
+    "demo-brief"
+  ],
+  "summary": "An illustrative coastal route showing a partly open project and a segmented route.",
+  "colour": "#9f64d8",
+  "geometry": {
+    "type": "LineString",
+    "coordinates": [
+      [
+        72.842,
+        18.939
+      ],
+      [
+        72.847,
+        18.979
+      ],
+      [
+        72.858,
+        19.023
+      ],
+      [
+        72.868,
+        19.067
+      ],
+      [
+        72.875,
+        19.109
+      ],
+      [
+        72.887,
+        19.155
+      ]
+    ]
+  },
+  "stations": [
+    "Harbour Point",
+    "Old Town",
+    "Civic Centre",
+    "Midtown",
+    "North Park",
+    "Airport Road"
+  ],
+  "milestones": [
+    {
+      "id": "m-1",
+      "date": "2026-02-14",
+      "title": "Illustrative first section opening",
+      "description": "Example milestone showing a partially operational status.",
+      "sourceId": "demo-brief",
+      "confidence": "low"
+    },
+    {
+      "id": "m-2",
+      "date": "2026-09-27",
+      "title": "Remaining section under review",
+      "description": "Example milestone for a pending segment.",
+      "sourceId": "demo-brief",
+      "confidence": "low"
+    }
+  ],
+  "recordKind": "demonstration",
+  "infrastructureType": "metro",
+  "scopeDescription": "An illustrative coastal route showing a partly open project and a segmented route."
+}

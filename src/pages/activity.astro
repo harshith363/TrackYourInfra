@@ -1,0 +1,13 @@
+---
+import Base from '../layouts/Base.astro';
+import { changes } from '../lib/changes';
+import { data, formatDate } from '../lib/data';
+const projectById = new Map(data.projects.map((project) => [project.id, project]));
+---
+<Base title="Accepted changes" description="A public summary of reviewed changes to TrackYourInfra project records.">
+  <div class="shell page-intro"><div class="section-label">ACCEPTED DATA / ACTIVITY</div><h1>What changed<em>.</em></h1><p>Only reviewed changes to the published dataset appear here. GitHub reports awaiting review are separate.</p></div>
+  <section class="shell activity-list" aria-label="Accepted project changes">
+    {changes.length === 0 ? <div class="empty-state">No reviewed project changes have been published yet. No published changes are available in this data mode.</div> : changes.map((change) => { const project = projectById.get(change.projectId)!; return <article class="activity-item"><time datetime={change.date}>{formatDate(change.date)}</time><h2><a href={`/projects/${project.slug}/history/`}>{project.name} ↗</a></h2><p>{change.reason}</p><ul>{change.fields.map((field) => <li>{field.field}: {field.before ?? 'Unknown'} → {field.after ?? 'Unknown'}</li>)}</ul></article>; })}
+  </section>
+</Base>
+<style>.activity-list{padding-bottom:100px}.activity-item{border-top:1px solid #dce5e4;padding:24px 0}.activity-item time{color:#4b9c83;font-size:11px;font-weight:800}.activity-item h2{font-size:22px}.activity-item p,.activity-item li{color:#667783;font-size:13px;line-height:1.6}</style>

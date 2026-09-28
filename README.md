@@ -1,6 +1,6 @@
 # TrackYourInfra
 
-An open, map led prototype for tracking public infrastructure in India. Phase 1 focuses on metro transit and uses invented demonstration data. No map line, cost, date, milestone or agency in this repository should be treated as a real project claim.
+An open, map-led atlas for tracking public infrastructure in India. The current scope is metro transit. The default local build uses invented demonstration data; a separate real-data mode contains source-backed project records. Demo map lines are not surveyed alignments.
 
 ## Run locally
 
@@ -11,7 +11,15 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Astro. The map uses a schematic, self contained India outline and local GeoJSON, so it works without a tile service. The outline and sample corridors are illustrative and should be replaced with reviewed geography before a public launch.
+To preview the source-backed dataset instead of the three demo corridors:
+
+```bash
+TRACKYOURINFRA_DATA_MODE=real npm run dev
+```
+
+Copy `.env.example` to `.env` or set `PUBLIC_GITHUB_REPO=harshith363/TrackYourInfra` to enable links from the contribution pages to GitHub Issue Forms and project files. Route drawing and GeoJSON export work without this setting. The local `.env` is ignored by Git.
+
+Open the local URL printed by Astro. The map uses a locally bundled, simplified DataMeet boundary following India's official territorial depiction, including the full Jammu & Kashmir and Ladakh region and islands. No tile service or API key is required. See [map data provenance](docs/map-data.md). Sample project corridors remain illustrative, not surveyed alignments.
 
 ## Verify
 
@@ -20,11 +28,14 @@ npm run validate
 npm test
 npm run check
 npm run build
+TRACKYOURINFRA_DATA_MODE=real npm run build
 ```
 
 ## Structure
 
-- `data/` — states, cities, agencies, projects and source JSON
+- `data/projects/`, `data/sources/`, `data/agencies/` — real records, one JSON file each
+- `fixtures/demo/` — clearly separated invented records
+- `data/changes.json` — accepted-change summaries for the real pilot
 - `src/lib/data.ts` — schemas, cross-reference checks and formatting helpers
 - `src/components/MapExplorer.astro` — India → state → city → project map navigation
 - `src/pages/` — statically generated public pages
@@ -34,4 +45,4 @@ The static JSON export is available at `/data/projects.json` after build.
 
 Canonical URLs and a sitemap should be added once a production domain is chosen in Phase 3.
 
-The public website and data are intended to share one MIT licensed repository. Community review, verified real project data, notifications and deployment are later phases.
+The public website, demo fixtures and real records share one MIT licensed repository. The bundled India boundary is CC0; the [separate city boundary assets](docs/city-map-data.md) retain DataMeet's CC BY-SA 2.5 India license. The [contributor guide](CONTRIBUTING.md) describes GitHub review. Deployment remains Phase 3.

@@ -1,0 +1,38 @@
+name: Project update or correction
+description: Suggest a sourced change to an existing metro project.
+title: "[Project update] "
+body:
+  - type: markdown
+    attributes:
+      value: "Reports are public. Please do not include private contact details. A report does not change the public record until a maintainer reviews a data pull request."
+  - type: input
+    id: project
+    attributes:
+      label: Project name or link
+      placeholder: "Project name or /projects/... link"
+    validations:
+      required: true
+  - type: input
+    id: field
+    attributes:
+      label: What needs changing?
+      placeholder: "Status, target date, cost, milestone, source, or other"
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed correction and explanation
+      description: Include the current value if known and explain the scope of the update.
+    validations:
+      required: true
+  - type: input
+    id: as-of
+    attributes:
+      label: As-of or observation date
+      placeholder: "YYYY-MM-DD, or explain if unknown"
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Public source links and relevant page or section
+      description: Reports without evidence can be triaged but cannot be accepted as facts.

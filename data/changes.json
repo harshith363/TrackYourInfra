@@ -1,0 +1,10 @@
+[
+  {
+    "id": "bengaluru-phase3-initial",
+    "projectId": "bengaluru-metro-phase-3",
+    "date": "2026-09-28",
+    "reason": "Added the first source-backed project record; route alignment remains unverified.",
+    "fields": [{ "field": "record", "before": null, "after": "Bengaluru Metro Phase 3" }],
+    "sourceIds": ["bengaluru-phase3-cabinet", "bengaluru-phase3-bmrcl-policy"]
+  }
+]

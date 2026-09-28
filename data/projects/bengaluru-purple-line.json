@@ -1,0 +1,31 @@
+{
+  "id": "bengaluru-purple-line",
+  "slug": "bengaluru-purple-line",
+  "name": "Purple Line",
+  "line": "Purple Line",
+  "stateId": "karnataka",
+  "cityId": "bengaluru",
+  "agencyId": "bmrcl",
+  "recordKind": "real",
+  "infrastructureType": "metro",
+  "scopeDescription": "Existing line",
+  "status": null,
+  "statusAsOf": null,
+  "confidence": null,
+  "updatedAt": "2026-09-28",
+  "routeLengthKm": null,
+  "stationCount": null,
+  "approvedCostCrore": null,
+  "latestCostCrore": null,
+  "originalTarget": null,
+  "currentTarget": null,
+  "progressPercent": null,
+  "sourceIds": [
+    "issue-2-source-1"
+  ],
+  "summary": "Existing line",
+  "colour": "#277d68",
+  "geometry": null,
+  "stations": [],
+  "milestones": []
+}

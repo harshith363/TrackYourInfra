@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { dataMode } from '../lib/data';
 const { title = 'TrackYourInfra', description = 'Explore public infrastructure projects through an open, evidence led map.' } = Astro.props;
 ---
 <!doctype html>
@@ -32,7 +33,7 @@ const { title = 'TrackYourInfra', description = 'Explore public infrastructure p
     </header>
     <main id="main"><slot /></main>
     <footer class="site-footer">
-      <div class="shell footer-inner"><div><a class="brand footer-brand" href="/">TrackYourInfra</a><p>Public infrastructure, in the open.</p></div><div class="footer-links"><a href="/projects">Projects</a><a href="/contribute/">Contribute</a><a href="/activity/">Activity</a><a href="/data/projects.json">JSON data</a><a href="/methodology">Methodology</a><a href="/methodology/#demonstration-data">Data note</a></div><p class="footer-note">Prototype · Demonstration data</p></div>
+      <div class="shell footer-inner"><div><a class="brand footer-brand" href="/">TrackYourInfra</a><p>Public infrastructure, in the open.</p></div><div class="footer-links"><a href="/projects">Projects</a><a href="/contribute/">Contribute</a><a href="/activity/">Activity</a><a href="/api/projects.json">JSON data</a><a href="/methodology">Methodology</a><a href="/methodology/#demonstration-data">Data note</a></div><p class="footer-note">Prototype · {dataMode === 'demo' ? 'Demonstration data' : 'Source-backed records'}</p></div>
     </footer>
   </body>
 </html>

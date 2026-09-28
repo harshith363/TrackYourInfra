@@ -21,6 +21,7 @@ jobs:
       pull-requests: write
       issues: write
       statuses: write
+      checks: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,6 +59,7 @@ jobs:
             sha="$(gh pr view "$existing" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq .headRefOid)"
             gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=contribution-validation -f description='Automated data and site checks passed' >/dev/null
             gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=site -f description='Automated data and site checks passed' >/dev/null
+            gh api --method POST "repos/$GITHUB_REPOSITORY/check-runs" -f name=site -f head_sha="$sha" -f status=completed -f conclusion=success -f 'output[title]=Contribution validation passed' -f 'output[summary]=The issue form, data records, tests, type checks, and real-data build passed.' >/dev/null
             exit 0
           fi
           git switch -c "$BRANCH"
@@ -70,6 +72,7 @@ jobs:
           gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=contribution-validation -f description='Automated data and site checks passed' >/dev/null
           gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=site -f description='Automated data and site checks passed' >/dev/null
           gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "$TITLE" --body-file "$BODY_PATH"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/check-runs" -f name=site -f head_sha="$sha" -f status=completed -f conclusion=success -f 'output[title]=Contribution validation passed' -f 'output[summary]=The issue form, data records, tests, type checks, and real-data build passed.' >/dev/null
           for stale in $(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefName --jq ".[] | select(.headRefName | startswith(\"automation/issue-${ISSUE_NUMBER}-\")) | select(.headRefName != \"${BRANCH}\") | .number"); do
             gh pr close "$stale" --repo "$GITHUB_REPOSITORY" --comment 'Superseded by an edited issue; please review the newly generated PR.'
           done

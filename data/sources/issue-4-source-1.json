@@ -1,10 +1,11 @@
 {
   "id": "issue-4-source-1",
-  "title": "Source submitted in issue #4 — verify title",
-  "publisher": "en.wikipedia.org",
+  "title": "Namma Metro",
+  "publisher": "Wikipedia contributors",
   "publishedAt": null,
   "type": "reporting",
   "url": "https://en.wikipedia.org/wiki/Namma_Metro",
-  "description": "Contributor-submitted source for issue #4; title, publisher, date, applicability and source type require review.",
-  "accessedAt": "2026-09-28"
+  "description": "This overview has a Purple Line section. It does not independently verify the drawn route alignment or any current project metric.",
+  "accessedAt": "2026-09-28",
+  "section": "Purple Line"
 }

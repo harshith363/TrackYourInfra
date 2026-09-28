@@ -37,5 +37,37 @@
       "issue-4-source-1"
     ],
     "issueUrl": "https://github.com/harshith363/TrackYourInfra/issues/4"
+  },
+  {
+    "id": "issue-7-change",
+    "projectId": "bengaluru-purple-line",
+    "date": "2026-09-28",
+    "reason": "This overview has a Purple Line section. It does not independently verify the drawn route alignment or any current project metric.",
+    "fields": [
+      {
+        "field": "source.title",
+        "before": "Source submitted in issue #4 — verify title",
+        "after": "Namma Metro"
+      },
+      {
+        "field": "source.publisher",
+        "before": "en.wikipedia.org",
+        "after": "Wikipedia contributors"
+      },
+      {
+        "field": "source.description",
+        "before": "Contributor-submitted source for issue #4; title, publisher, date, applicability and source type require review.",
+        "after": "This overview has a Purple Line section. It does not independently verify the drawn route alignment or any current project metric."
+      },
+      {
+        "field": "source.section",
+        "before": null,
+        "after": "Purple Line"
+      }
+    ],
+    "sourceIds": [
+      "issue-4-source-1"
+    ],
+    "issueUrl": "https://github.com/harshith363/TrackYourInfra/issues/7"
   }
 ]

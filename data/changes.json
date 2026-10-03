@@ -69,5 +69,27 @@
       "issue-4-source-1"
     ],
     "issueUrl": "https://github.com/harshith363/TrackYourInfra/issues/7"
+  },
+  {
+    "id": "issue-12-change",
+    "projectId": "bengaluru-green-line",
+    "date": "2026-10-03",
+    "reason": "Line",
+    "fields": [
+      {
+        "field": "record",
+        "before": null,
+        "after": "Green line"
+      },
+      {
+        "field": "routeProposal",
+        "before": null,
+        "after": "Unverified schematic community route"
+      }
+    ],
+    "sourceIds": [
+      "issue-4-source-1"
+    ],
+    "issueUrl": "https://github.com/harshith363/TrackYourInfra/issues/12"
   }
 ]

@@ -1,0 +1,95 @@
+{
+  "id": "bengaluru-green-line",
+  "slug": "bengaluru-green-line",
+  "name": "Green line",
+  "line": "Green line",
+  "stateId": "karnataka",
+  "cityId": "bengaluru",
+  "agencyId": "bmrcl",
+  "recordKind": "real",
+  "infrastructureType": "metro",
+  "scopeDescription": "Exisiting line",
+  "status": null,
+  "statusAsOf": null,
+  "confidence": null,
+  "updatedAt": "2026-10-03",
+  "routeLengthKm": null,
+  "stationCount": null,
+  "approvedCostCrore": null,
+  "latestCostCrore": null,
+  "originalTarget": null,
+  "currentTarget": null,
+  "progressPercent": null,
+  "sourceIds": [
+    "issue-4-source-1"
+  ],
+  "summary": "Exisiting line",
+  "colour": "#277d68",
+  "geometry": null,
+  "routeProposal": {
+    "status": "unverified",
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          77.49628,
+          13.05761
+        ],
+        [
+          77.52907,
+          13.04812
+        ],
+        [
+          77.56009,
+          13.04207
+        ],
+        [
+          77.57693,
+          13.02308
+        ],
+        [
+          77.5787,
+          12.99718
+        ],
+        [
+          77.58313,
+          12.97645
+        ],
+        [
+          77.58933,
+          12.94709
+        ],
+        [
+          77.58933,
+          12.92982
+        ],
+        [
+          77.58224,
+          12.91168
+        ],
+        [
+          77.55389,
+          12.88145
+        ],
+        [
+          77.53705,
+          12.85466
+        ],
+        [
+          77.51933,
+          12.83566
+        ]
+      ]
+    },
+    "precision": "schematic",
+    "license": "CC BY 4.0",
+    "creator": "harshith363",
+    "issueUrl": "https://github.com/harshith363/TrackYourInfra/issues/12",
+    "submittedAt": "2026-10-03",
+    "sourceIds": [
+      "issue-4-source-1"
+    ]
+  },
+  "stations": [],
+  "milestones": []
+}

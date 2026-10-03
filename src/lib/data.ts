@@ -124,6 +124,11 @@ export const projectSchema = z.object({
       precision: z.enum(["schematic", "approximate", "reviewed"]),
       license: z.string().min(1),
       reviewedAt: date.nullable(),
+      creator: z
+        .string()
+        .regex(/^[A-Za-z0-9-]+$/)
+        .optional(),
+      proposalIssueUrl: z.url().optional(),
     })
     .optional(),
   routeProposal: z

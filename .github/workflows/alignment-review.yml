@@ -1,0 +1,152 @@
+name: Review a dashed alignment
+on:
+  issues:
+    types: [opened, edited, reopened, labeled]
+
+concurrency:
+  group: public-data-publication
+  cancel-in-progress: false
+
+jobs:
+  request:
+    if: >-
+      contains(github.event.issue.body, '### Alignment evidence URL') &&
+      (github.event.action == 'opened' || github.event.action == 'edited' || github.event.action == 'reopened')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/checkout@v4
+        with:
+          ref: public-data
+          path: .published-data
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Invalidate approval after an edit or reopening
+        if: github.event.action == 'edited' || github.event.action == 'reopened'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label 'alignment:approved' || true
+      - name: Load the latest published records
+        run: |
+          cp -R .published-data/data/projects/. data/projects/
+          cp -R .published-data/data/sources/. data/sources/
+          cp .published-data/data/changes.json data/changes.json
+      - name: Check request structure and available project
+        id: alignment
+        env:
+          TRACKYOURINFRA_DATA_MODE: real
+          ALIGNMENT_CHECK_ONLY: "1"
+        run: node --import tsx scripts/prepare-alignment-review.ts
+      - name: Mark ready for a maintainer's evidence comparison
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh label create 'alignment:needs-review' --repo "$GITHUB_REPOSITORY" --color 'fbca04' --description 'A maintainer must compare the drawn path against the evidence' --force
+          gh label create 'alignment:approved' --repo "$GITHUB_REPOSITORY" --color '0052cc' --description 'Repository owner approved the exact drawn route against public evidence' --force
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label 'alignment:needs-review'
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body 'The form passed structural checks. Repository owner: compare the **entire existing dashed route** against the linked map/document. If its coordinates are too rough or inaccurate, leave it dashed and ask for a corrected map proposal. If the drawn path is adequately supported, add the `alignment:approved` label yourself. That will publish the reviewed line as solid without a code PR.'
+      - name: Explain a failed request
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ERROR: ${{ steps.alignment.outputs.error }}
+        run: |
+          if [ -n "$ERROR" ]; then gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Alignment request needs a correction: $ERROR. Edit the issue to retry."; fi
+
+  publish:
+    if: >-
+      contains(github.event.issue.body, '### Alignment evidence URL') &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'alignment:approved'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - uses: actions/checkout@v4
+        with:
+          ref: public-data
+          path: .published-data
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Require repository-owner approval
+        run: |
+          if [ "$GITHUB_ACTOR" != "${GITHUB_REPOSITORY%%/*}" ]; then
+            echo 'Only the repository owner may approve an alignment.' >&2
+            exit 1
+          fi
+      - name: Load the latest published records
+        run: |
+          cp -R .published-data/data/projects/. data/projects/
+          cp -R .published-data/data/sources/. data/sources/
+          cp .published-data/data/changes.json data/changes.json
+      - name: Generate reviewed alignment from approved request
+        id: alignment
+        env:
+          TRACKYOURINFRA_DATA_MODE: real
+        run: node --import tsx scripts/prepare-alignment-review.ts
+      - name: Validate published data and site
+        env:
+          TRACKYOURINFRA_DATA_MODE: real
+        run: |
+          npm run validate
+          npm test
+          npm run check
+          npm run build
+      - name: Commit reviewed alignment to public-data
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ steps.alignment.outputs.issue_number }}
+          ISSUE_HASH: ${{ steps.alignment.outputs.issue_hash }}
+          CONTRIBUTION_KIND: alignment
+          REQUIRED_LABEL: alignment:approved
+          PROJECT_PATH: ${{ steps.alignment.outputs.project_path }}
+          SOURCE_PATH: ${{ steps.alignment.outputs.source_path }}
+        run: |
+          cp "$PROJECT_PATH" ".published-data/$PROJECT_PATH"
+          if [ -n "$SOURCE_PATH" ]; then cp "$SOURCE_PATH" ".published-data/$SOURCE_PATH"; fi
+          cp data/changes.json .published-data/data/changes.json
+          git -C .published-data add data/projects data/sources data/changes.json
+          node --import tsx scripts/verify-data-publication.ts
+          git -C .published-data config user.name 'github-actions[bot]'
+          git -C .published-data config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C .published-data commit -m "Review alignment from issue #${ISSUE_NUMBER}" -m "Issue SHA256: ${ISSUE_HASH}"
+          git -C .published-data push origin HEAD:public-data
+          sha="$(git -C .published-data rev-parse HEAD)"
+          gh label create 'alignment:reviewed' --repo "$GITHUB_REPOSITORY" --color '0e8a16' --description 'Reviewed alignment published to public-data' --force
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label 'alignment:needs-review' --add-label 'alignment:reviewed'
+          gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "Reviewed alignment committed to public-data at $sha. The existing drawn route is now displayed as a solid line in the next real-data build or deployment."
+      - name: Explain publication failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ERROR: ${{ steps.alignment.outputs.error }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -n "$ERROR" ]; then
+            gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Reviewed alignment was not published: $ERROR. Check the request before retrying. Details: $RUN_URL"
+          else
+            gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Reviewed alignment was not published. Check the workflow before retrying: $RUN_URL"
+          fi

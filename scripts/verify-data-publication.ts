@@ -38,6 +38,15 @@ if (
   throw new Error(
     "The issue changed during processing; retry its latest revision.",
   );
+if (
+  process.env.REQUIRED_LABEL &&
+  !issue.labels?.some(
+    (label: { name?: string }) => label.name === process.env.REQUIRED_LABEL,
+  )
+)
+  throw new Error(
+    "The required maintainer approval label is no longer present.",
+  );
 
 const checkout = resolve(".published-data");
 const branch = execFileSync("git", ["branch", "--show-current"], {

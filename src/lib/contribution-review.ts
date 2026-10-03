@@ -15,7 +15,8 @@ export function assertDataOnlyDiff(files: unknown, kind: string) {
   );
   if (
     changes.length !== 1 ||
-    sources.length !== 1 ||
+    sources.length > 1 ||
+    (kind === "source-correction" && sources.length !== 1) ||
     projects.length !==
       (kind === "source-correction" && list.length === 2 ? 0 : 1) ||
     changes.length + sources.length + projects.length !== list.length

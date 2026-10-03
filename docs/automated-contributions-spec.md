@@ -1,6 +1,6 @@
 # Automated data contributions
 
-Status: implementation in progress. Local converter, forms, tests, and GitHub workflow are written; a live GitHub issue-to-merge trial and production deployment remain unverified. This replaces the manual data-PR handoff described in older Phase 2 notes.
+Status: historical two-stage design, superseded by the simpler automatic-publication workflow described in [CONTRIBUTING.md](../CONTRIBUTING.md). This document is retained for design history; its approval gate and form contract are not the current implementation. A live GitHub trial of the new workflow and production deployment remain to be verified.
 
 ## Decision
 

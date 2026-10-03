@@ -161,7 +161,7 @@ test("map correction keeps licensed community geometry unverified", () => {
   );
 });
 
-test("rejects repeated source URL and invalid values", () => {
+test("reuses a registered source URL and rejects invalid values", () => {
   const body =
     section("Contribution type", "Project update") +
     section("Project ID", "bengaluru-purple-line") +
@@ -174,15 +174,42 @@ test("rejects repeated source URL and invalid values", () => {
     () => prepareContribution(input(body)),
     /Invalid numeric value/,
   );
-  assert.throws(
-    () =>
-      prepareContribution({
-        ...input(body),
-        sources: [
-          ...catalog.sources,
-          { ...cabinet, id: "other", url: sourceUrl },
-        ],
-      }),
-    /already in the register/,
+  const result = prepareContribution({
+    ...input(body.replace("101", "25")),
+    sources: [...catalog.sources, { ...cabinet, id: "other", url: sourceUrl }],
+  });
+  assert.deepEqual(result.sources, []);
+  assert.equal(
+    result.project.claimEvidence?.progressPercent.sourceIds[0],
+    "other",
   );
+});
+
+test("a short new-project form infers its type and source metadata", () => {
+  const body =
+    section("Project name and phase or line", "Green Line") +
+    section("City and state or Union Territory", "Bengaluru, Karnataka") +
+    section("Responsible agency, if known", "BMRCL") +
+    section("What does this project record cover?", "An existing line.") +
+    section("Public source URL", "https://example.org/green-line") +
+    section("What does this source establish?", "The line exists.");
+  const result = prepareContribution(input(body, 81));
+  assert.equal(result.kind, "new-project");
+  assert.equal(result.sources[0].publisher, "example.org");
+  assert.equal(result.sources[0].type, "reporting");
+});
+
+test("a new project can cite a registered source without duplicating it", () => {
+  const body =
+    section("Contribution type", "Namma metro") +
+    section("Project name and phase or line", "Green Line") +
+    section("City and state or Union Territory", "Bengaluru, Karnataka") +
+    section("Responsible agency, if known", "BMRCL") +
+    section("What does this project record cover?", "An existing line.") +
+    section("Public source URL", purpleSource.url) +
+    section("What does this source establish?", "The line exists.");
+  const result = prepareContribution(input(body, 82));
+  assert.deepEqual(result.sources, []);
+  assert.deepEqual(result.project.sourceIds, [purpleSource.id]);
+  assert.equal(result.kind, "new-project");
 });

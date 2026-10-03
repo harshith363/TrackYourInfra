@@ -2,8 +2,6 @@ name: Automated data contributions
 on:
   issues:
     types: [opened, edited, reopened]
-  pull_request_review:
-    types: [submitted]
 
 concurrency:
   group: contribution-${{ github.event.issue.number || github.event.pull_request.number }}
@@ -13,7 +11,7 @@ jobs:
   prepare:
     if: >-
       github.event_name == 'issues' &&
-      contains(github.event.issue.body, '### Contribution type')
+      contains(github.event.issue.body, '### Public source URL')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -45,38 +43,57 @@ jobs:
           npm test
           npm run check
           npm run build
-      - name: Create the generated PR and retire stale revisions
+      - name: Publish the validated data change
         env:
           GH_TOKEN: ${{ github.token }}
           BRANCH: ${{ steps.contribution.outputs.branch }}
           BODY_PATH: ${{ steps.contribution.outputs.body_path }}
           TITLE: ${{ steps.contribution.outputs.title }}
           ISSUE_NUMBER: ${{ steps.contribution.outputs.issue_number }}
+          ISSUE_HASH: ${{ steps.contribution.outputs.issue_hash }}
+          CONTRIBUTION_KIND: ${{ steps.contribution.outputs.kind }}
         run: |
           existing="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --head "$BRANCH" --json url --jq '.[0].url // empty')"
           if [ -n "$existing" ]; then
-            echo "This exact issue revision already has a PR: $existing" >> "$GITHUB_STEP_SUMMARY"
-            sha="$(gh pr view "$existing" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq .headRefOid)"
-            gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=contribution-validation -f description='Automated data and site checks passed' >/dev/null
+            state="$(gh pr view "$existing" --repo "$GITHUB_REPOSITORY" --json state --jq .state)"
+            if [ "$state" = "MERGED" ]; then
+              echo "This issue revision was already published: $existing" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            pr="$existing"
+            sha="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq .headRefOid)"
+          else
+            git switch -c "$BRANCH"
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add data/projects data/sources data/changes.json
+            git commit -m "Generate data change for issue #${ISSUE_NUMBER}"
+            git push origin "$BRANCH"
+            sha="$(git rev-parse HEAD)"
             gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=site -f description='Automated data and site checks passed' >/dev/null
             gh api --method POST "repos/$GITHUB_REPOSITORY/check-runs" -f name=site -f head_sha="$sha" -f status=completed -f conclusion=success -f 'output[title]=Contribution validation passed' -f 'output[summary]=The issue form, data records, tests, type checks, and real-data build passed.' >/dev/null
-            exit 0
+            pr="$(gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "$TITLE" --body-file "$BODY_PATH")"
           fi
-          git switch -c "$BRANCH"
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/projects data/sources data/changes.json
-          git commit -m "Generate data change for issue #${ISSUE_NUMBER}"
-          git push origin "$BRANCH"
-          sha="$(git rev-parse HEAD)"
-          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=contribution-validation -f description='Automated data and site checks passed' >/dev/null
-          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=site -f description='Automated data and site checks passed' >/dev/null
-          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "$TITLE" --body-file "$BODY_PATH"
-          gh api --method POST "repos/$GITHUB_REPOSITORY/check-runs" -f name=site -f head_sha="$sha" -f status=completed -f conclusion=success -f 'output[title]=Contribution validation passed' -f 'output[summary]=The issue form, data records, tests, type checks, and real-data build passed.' >/dev/null
-          for stale in $(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefName --jq ".[] | select(.headRefName | startswith(\"automation/issue-${ISSUE_NUMBER}-\")) | select(.headRefName != \"${BRANCH}\") | .number"); do
-            gh pr close "$stale" --repo "$GITHUB_REPOSITORY" --comment 'Superseded by an edited issue; please review the newly generated PR.'
+          PR_URL="$pr" HEAD_SHA="$sha" node --import tsx scripts/verify-automatic-publication.ts
+          merged=false
+          for attempt in 1 2 3 4 5 6; do
+            if gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash --delete-branch --match-head-commit "$sha"; then
+              merged=true
+              break
+            fi
+            sleep 5
           done
-          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Automated checks passed. Review the generated data PR linked above; a maintainer must verify its evidence and approve that exact commit."
+          if [ "$merged" != true ]; then
+            echo "GitHub did not merge the validated PR; the issue remains available for retry." >&2
+            exit 1
+          fi
+          gh label create 'contribution:published' --repo "$GITHUB_REPOSITORY" --color '0e8a16' --description 'Automatically published data contribution' --force
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label 'contribution:published'
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Published automatically after structural checks. The source claim has not been independently verified; see $pr."
+          echo "Published $pr" >> "$GITHUB_STEP_SUMMARY"
+          for stale in $(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefName --jq ".[] | select(.headRefName | startswith(\"automation/issue-${ISSUE_NUMBER}-\")) | select(.headRefName != \"${BRANCH}\") | .number"); do
+            gh pr close "$stale" --repo "$GITHUB_REPOSITORY" --comment 'Superseded by a published issue revision.'
+          done
       - name: Explain a failed submission
         if: failure()
         env:
@@ -88,49 +105,5 @@ jobs:
           if [ -n "$ERROR" ]; then
             gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Automated checks need a correction: $ERROR. Edit the issue form to retry. Details: $RUN_URL"
           else
-            gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Automated checks could not prepare this contribution. Review the workflow result and edit the issue to retry: $RUN_URL"
+            gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Automatic publication did not complete. Check the workflow and edit or reopen the issue to retry: $RUN_URL"
           fi
-
-  publish:
-    if: >-
-      github.event_name == 'pull_request_review' &&
-      github.event.review.state == 'approved' &&
-      startsWith(github.event.pull_request.head.ref, 'automation/issue-')
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          persist-credentials: true
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-      - run: npm ci
-      - name: Bind human approval to the unchanged issue and generated commit
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node --import tsx scripts/verify-contribution-review.ts
-      - uses: actions/checkout@v4
-        with:
-          ref: refs/pull/${{ github.event.pull_request.number }}/merge
-          persist-credentials: true
-      - name: Repeat all checks before publication
-        env:
-          TRACKYOURINFRA_DATA_MODE: real
-        run: |
-          npm run validate
-          npm test
-          npm run check
-          npm run build
-      - name: Merge the approved data-only PR
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch --match-head-commit "$HEAD_SHA"

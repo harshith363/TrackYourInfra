@@ -54,13 +54,15 @@ if (
 )
   throw new Error("This issue already has a published change record.");
 const projectPath = resolve(`data/projects/${proposal.project.id}.json`);
-const sourcePath = resolve(`data/sources/${proposal.sources[0].id}.json`);
 writeFileSync(projectPath, `${JSON.stringify(proposal.project, null, 2)}\n`);
-writeFileSync(
-  sourcePath,
-  `${JSON.stringify(proposal.sources[0], null, 2)}\n`,
-  proposal.kind === "source-correction" ? undefined : { flag: "wx" },
-);
+if (proposal.sources[0]) {
+  const sourcePath = resolve(`data/sources/${proposal.sources[0].id}.json`);
+  writeFileSync(
+    sourcePath,
+    `${JSON.stringify(proposal.sources[0], null, 2)}\n`,
+    proposal.kind === "source-correction" ? undefined : { flag: "wx" },
+  );
+}
 changes.push(proposal.change);
 writeFileSync(changesPath, `${JSON.stringify(changes, null, 2)}\n`);
 
@@ -75,8 +77,7 @@ const body = [
   `Contribution type: ${proposal.kind}`,
   `Project: ${proposal.project.id}`,
   "",
-  "Stage 1: generated from the form and checked by the automation job. This does not verify factual truth.",
-  "Stage 2: a maintainer must open the source and review this exact PR commit before approving.",
+  "Automatically generated from the issue and checked for data validity. Source claims have not been independently verified.",
   proposal.kind === "map"
     ? "A community proposal remains unverified unless the form requested an evidence-reviewed alignment and the source establishes that exact alignment."
     : "",
@@ -91,6 +92,6 @@ writeFileSync(bodyPath, `${body}\n`);
 if (process.env.GITHUB_OUTPUT)
   appendFileSync(
     process.env.GITHUB_OUTPUT,
-    `branch=${branch}\nbody_path=${bodyPath}\ntitle=${title}\nissue_number=${issue.number}\n`,
+    `branch=${branch}\nbody_path=${bodyPath}\ntitle=${title}\nissue_number=${issue.number}\nissue_hash=${proposal.issueHash}\nkind=${proposal.kind}\n`,
   );
 console.log(`Prepared ${proposal.kind} for ${proposal.project.id}.`);

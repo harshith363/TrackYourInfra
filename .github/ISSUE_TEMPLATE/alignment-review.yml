@@ -1,0 +1,26 @@
+name: Request reviewed alignment
+description: Ask for an existing dashed route to be checked and shown as a solid line.
+title: "[Alignment review] "
+body:
+  - type: markdown
+    attributes:
+      value: "This does not redraw a route. It asks the maintainer to compare the existing dashed line, point by point, with a public map or document. A general article confirming that a line exists is not enough. The line stays dashed until approved."
+  - type: input
+    id: project-id
+    attributes:
+      label: Project ID
+      description: Copy the ID from the project's URL or record.
+      placeholder: bengaluru-green-line
+    validations: { required: true }
+  - type: input
+    id: evidence-url
+    attributes:
+      label: Alignment evidence URL
+      description: Link to a public map or document that shows the route's path.
+    validations: { required: true }
+  - type: textarea
+    id: explanation
+    attributes:
+      label: How does this source establish the drawn path?
+      description: Mention the map, page, or stations that allow comparison with the current dashed line.
+    validations: { required: true }

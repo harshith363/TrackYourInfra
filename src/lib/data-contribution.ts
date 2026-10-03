@@ -67,11 +67,18 @@ function sourceFromForm(
   )
     throw new Error("Public source URL must be HTTP(S) without credentials.");
   const publishedAt = read("Source publication date (optional)");
+  const inferredTitle = `${url.hostname}${url.pathname === "/" ? "" : url.pathname}`;
   return sourceSchema.parse({
     id,
-    title: clean(read("Source title")),
-    publisher: clean(read("Source publisher")),
-    type: clean(read("Source type")),
+    title: absent(read("Source title"))
+      ? inferredTitle.slice(0, 400)
+      : clean(read("Source title")),
+    publisher: absent(read("Source publisher"))
+      ? url.hostname
+      : clean(read("Source publisher")),
+    type: absent(read("Source type"))
+      ? "reporting"
+      : clean(read("Source type")),
     url: url.toString(),
     publishedAt: absent(publishedAt) ? null : clean(publishedAt, 10),
     accessedAt: today,
@@ -139,12 +146,7 @@ function projectFor(input: Catalog, id: string) {
   return project;
 }
 
-function routeFromForm(
-  raw: string,
-  project: Project,
-  input: Catalog,
-  sourceUrl: string,
-) {
+function routeFromForm(raw: string, project: Project, input: Catalog) {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -165,13 +167,6 @@ function routeFromForm(
     feature.properties?.proposal !== true
   )
     throw new Error("Use one route-editor LineString for this project's city.");
-  if (
-    feature.properties?.sourceUrl !== null &&
-    feature.properties?.sourceUrl !== sourceUrl
-  )
-    throw new Error(
-      "The route editor source URL must match the submitted source.",
-    );
   const points = feature.geometry.coordinates;
   if (!Array.isArray(points) || points.length < 2 || points.length > 200)
     throw new Error("Route needs 2–200 points.");
@@ -203,27 +198,43 @@ function routeFromForm(
 
 export function prepareContribution(input: Catalog): Proposal {
   const read = sections(input.body);
-  const kind = read("Contribution type");
+  const kind = read("Project name and phase or line")
+    ? "New metro project"
+    : read("Route editor GeoJSON")
+      ? "Map correction"
+      : read("Field to update")
+        ? "Project update"
+        : read("Source action")
+          ? "Source addition"
+          : read("Contribution type");
   const correcting =
     kind === "Source addition" &&
     read("Source action") === "Correct existing source";
   const sourceId = correcting
     ? clean(read("Existing source ID (for corrections)"), 100)
     : undefined;
-  const source = sourceFromForm(read, input.issueNumber, input.today, sourceId);
+  const submittedSource = sourceFromForm(
+    read,
+    input.issueNumber,
+    input.today,
+    sourceId,
+  );
+  const registeredSource = correcting
+    ? undefined
+    : input.sources.find((item) => item.url === submittedSource.url);
+  const source = registeredSource ?? submittedSource;
   const oldSource = input.sources.find((item) => item.id === source.id);
   if (correcting && !oldSource)
     throw new Error("Existing source ID is not in the register.");
-  if (!correcting && oldSource)
+  if (!correcting && oldSource && !registeredSource)
     throw new Error("This issue already has a published source record.");
   if (
+    correcting &&
     input.sources.some(
       (item) => item.id !== source.id && item.url === source.url,
     )
   )
-    throw new Error(
-      "This source URL is already in the register; cite the existing source or provide a distinct document.",
-    );
+    throw new Error("This URL belongs to a different registered source.");
   if (
     kind === "Source addition" &&
     !["Add new source", "Correct existing source"].includes(
@@ -242,6 +253,7 @@ export function prepareContribution(input: Catalog): Proposal {
       throw new Error("Provide the same single URL in both source fields.");
     project = old.project;
     project.sourceIds = [source.id];
+    if (project.routeProposal) project.routeProposal.sourceIds = [source.id];
     fields = old.change.fields;
   } else {
     const id = clean(read("Project ID"), 100);
@@ -270,15 +282,13 @@ export function prepareContribution(input: Catalog): Proposal {
       (project as unknown as Record<string, unknown>)[field] = value;
       if (claimFields.includes(field as (typeof claimFields)[number])) {
         const asOf = clean(read("Claim as-of date"), 10);
-        const confidence = clean(read("Confidence"), 10);
-        if (!/^(high|medium|low)$/.test(confidence))
-          throw new Error("Invalid confidence.");
+        const confidence = "low";
         project.claimEvidence = {
           ...project.claimEvidence,
           [field]: {
             sourceIds: [source.id],
             asOf,
-            reviewedAt: input.today,
+            reviewedAt: null,
             confidence: confidence as "high" | "medium" | "low",
           },
         };
@@ -329,15 +339,15 @@ export function prepareContribution(input: Catalog): Proposal {
         rawRoute.replace(/^```(?:json)?\s*\n/i, "").replace(/\n```\s*$/, ""),
         project,
         input,
-        source.url,
       );
-      const mode = read("Map contribution kind");
-      if (
-        mode !== "Unverified community proposal" &&
-        mode !== "Evidence-reviewed alignment"
-      )
-        throw new Error("Unknown map contribution kind.");
-      if (mode === "Unverified community proposal") {
+      const mode = absent(read("Map contribution kind"))
+        ? "Unverified community proposal"
+        : read("Map contribution kind");
+      if (mode !== "Unverified community proposal")
+        throw new Error(
+          "Automatic publication supports unverified route proposals only.",
+        );
+      {
         if (project.geometry)
           throw new Error(
             "An accepted alignment already exists; use an evidence-reviewed correction.",
@@ -359,22 +369,6 @@ export function prepareContribution(input: Catalog): Proposal {
             after: `${route.precision} community proposal`,
           },
         ];
-      } else {
-        project.routeProposal = undefined;
-        project.geometry = { type: route.type, coordinates: route.coordinates };
-        project.geometryMeta = {
-          sourceIds: [source.id],
-          precision: "reviewed",
-          license: "CC BY 4.0",
-          reviewedAt: input.today,
-        };
-        fields = [
-          {
-            field: "geometry",
-            before: before.geometry ? "Existing alignment" : null,
-            after: "Evidence-reviewed alignment",
-          },
-        ];
       }
     } else {
       throw new Error("Unsupported Issue Form contribution type.");
@@ -388,7 +382,9 @@ export function prepareContribution(input: Catalog): Proposal {
       : [...input.projects, project],
     sources: correcting
       ? input.sources.map((item) => (item.id === source.id ? source : item))
-      : [...input.sources, source],
+      : registeredSource
+        ? input.sources
+        : [...input.sources, source],
   });
   return {
     kind:
@@ -402,7 +398,7 @@ export function prepareContribution(input: Catalog): Proposal {
               : "source"
             : "map",
     project,
-    sources: [source],
+    sources: registeredSource ? [] : [source],
     issueHash: issueHash(input.body),
     change: {
       id: `issue-${input.issueNumber}-change`,

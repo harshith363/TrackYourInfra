@@ -4,11 +4,7 @@ title: "[New metro project] "
 body:
   - type: markdown
     attributes:
-      value: "Reports are public. Submit one public source and its metadata. The bot prepares the data; a maintainer checks the evidence. Unknown costs, dates, and routes are fine."
-  - type: input
-    id: contribution-type
-    attributes: { label: Contribution type, value: New metro project }
-    validations: { required: true }
+      value: "Add a project with one public source. The bot checks and records valid submissions automatically in the public-data branch. Source claims are community-submitted, not independently verified. Unknown costs, dates, and routes are fine."
   - type: input
     id: name
     attributes:
@@ -36,25 +32,6 @@ body:
     id: source-url
     attributes: { label: Public source URL }
     validations: { required: true }
-  - type: input
-    id: source-title
-    attributes: { label: Source title }
-    validations: { required: true }
-  - type: input
-    id: source-publisher
-    attributes: { label: Source publisher }
-    validations: { required: true }
-  - type: dropdown
-    id: source-type
-    attributes: { label: Source type, options: [primary, reporting, field] }
-    validations: { required: true }
-  - type: input
-    id: source-date
-    attributes:
-      { label: Source publication date (optional), placeholder: YYYY-MM-DD }
-  - type: input
-    id: source-section
-    attributes: { label: Source section or page (optional) }
   - type: textarea
     id: source-proof
     attributes: { label: "What does this source establish?" }

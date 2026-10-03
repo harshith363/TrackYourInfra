@@ -4,11 +4,7 @@ title: "[Project update] "
 body:
   - type: markdown
     attributes:
-      value: "One field per issue. The bot prepares data; a maintainer checks the evidence."
-  - type: input
-    id: contribution-type
-    attributes: { label: Contribution type, value: Project update }
-    validations: { required: true }
+      value: "Change one project fact with a public source. Valid submissions are recorded automatically as community-submitted data."
   - type: input
     id: project-id
     attributes:
@@ -48,33 +44,10 @@ body:
     id: as-of
     attributes: { label: Claim as-of date, placeholder: YYYY-MM-DD }
     validations: { required: true }
-  - type: dropdown
-    id: confidence
-    attributes: { label: Confidence, options: [high, medium, low] }
-    validations: { required: true }
   - type: input
     id: source-url
     attributes: { label: Public source URL }
     validations: { required: true }
-  - type: input
-    id: source-title
-    attributes: { label: Source title }
-    validations: { required: true }
-  - type: input
-    id: source-publisher
-    attributes: { label: Source publisher }
-    validations: { required: true }
-  - type: dropdown
-    id: source-type
-    attributes: { label: Source type, options: [primary, reporting, field] }
-    validations: { required: true }
-  - type: input
-    id: source-date
-    attributes:
-      { label: Source publication date (optional), placeholder: YYYY-MM-DD }
-  - type: input
-    id: source-section
-    attributes: { label: Source section or page (optional) }
   - type: textarea
     id: evidence
     attributes: { label: "What does this source establish?" }

@@ -21,10 +21,11 @@ test("allows a source-only correction without a redundant project edit", () => {
   );
 });
 
-test("other contributions need one source, project, and history file", () => {
+test("other contributions need a project and history file, with an optional reused source", () => {
   assert.doesNotThrow(() =>
     assertDataOnlyDiff([changes, source, project], "map"),
   );
+  assert.doesNotThrow(() => assertDataOnlyDiff([changes, project], "map"));
   assert.throws(
     () => assertDataOnlyDiff([changes, source], "map"),
     /unexpected files/,

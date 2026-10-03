@@ -43,9 +43,12 @@ export function parseNewProjectIssue(body: string): Record<Field, string> {
   if (!values.has(headings.evidence) && values.has("Public source URL"))
     values.set(headings.evidence, values.get("Public source URL")!);
   if (
-    !Object.entries(headings)
-      .filter(([key]) => key !== "routePermission")
-      .every(([, heading]) => values.has(heading))
+    ![
+      headings.name,
+      headings.location,
+      headings.scope,
+      headings.evidence,
+    ].every((heading) => values.has(heading))
   )
     throw new Error("Only the New metro project Issue Form is supported.");
   const fields = Object.fromEntries(
@@ -286,16 +289,8 @@ export function prepareNewProject(input: {
       );
     if (!/^[A-Za-z0-9-]+$/.test(input.author))
       throw new Error("Issue author is invalid.");
-    if (route.sourceUrl && !urls.includes(route.sourceUrl))
-      throw new Error(
-        "Route source URL must also appear in the public source links field.",
-      );
   }
-  const routeSourceIds = route.sourceUrl
-    ? sources
-        .filter((source) => source.url === route.sourceUrl)
-        .map((source) => source.id)
-    : sources.map((source) => source.id);
+  const routeSourceIds = sources.map((source) => source.id);
   const project = projectSchema.parse({
     id: slug,
     slug,
@@ -346,7 +341,7 @@ export function prepareNewProject(input: {
       id: `issue-${input.issueNumber}-initial`,
       projectId: slug,
       date: input.today,
-      reason: `Initial draft generated from issue #${input.issueNumber}; requires maintainer review.`,
+      reason: `Community project record submitted in issue #${input.issueNumber}; source claims are unverified.`,
       fields: [
         { field: "record", before: null, after: fields.name },
         ...(route.geometry

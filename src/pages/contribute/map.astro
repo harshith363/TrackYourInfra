@@ -4,6 +4,6 @@ import RouteEditor from '../../components/RouteEditor.astro';
 import { issueChooserUrl } from '../../lib/contributions';
 ---
 <Base title="Draw a route" description="Draw an approximate metro route proposal by placing dots on a city map.">
-  <div class="shell page-intro"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="/contribute/">Contribute</a><span>/</span><span>Draw a route</span></nav><div class="section-label">MAP CONTRIBUTION</div><h1>Draw a proposed <em>route.</em></h1><p>Choose a city, then click or tap the map to place dots in route order. Two or more dots make a line. This drawing remains a proposal until a maintainer reviews the evidence.</p></div>
+  <div class="shell page-intro"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="/contribute/">Contribute</a><span>/</span><span>Draw a route</span></nav><div class="section-label">MAP CONTRIBUTION</div><h1>Draw a proposed <em>route.</em></h1><p>Choose a city, then click or tap the map to place dots in route order. Two or more dots make a line. Published drawings remain marked as unverified community proposals.</p></div>
   <RouteEditor issueChooserUrl={issueChooserUrl} />
 </Base>

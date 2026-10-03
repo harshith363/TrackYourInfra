@@ -7,8 +7,12 @@ import cityContextJson from "../../data/city-context.json";
 
 export const dataMode =
   process.env.TRACKYOURINFRA_DATA_MODE === "real" ? "real" : "demo";
-const collection = (path: string) => {
-  const directory = resolve(process.cwd(), path);
+const collection = (path: string, published = false) => {
+  const root =
+    published && process.env.TRACKYOURINFRA_DATA_ROOT
+      ? resolve(process.cwd(), process.env.TRACKYOURINFRA_DATA_ROOT)
+      : process.cwd();
+  const directory = resolve(root, path);
   return readdirSync(directory)
     .filter((name) => name.endsWith(".json"))
     .sort()
@@ -20,11 +24,11 @@ const agenciesJson =
     : collection("fixtures/demo/agencies");
 const sourcesJson =
   dataMode === "real"
-    ? collection("data/sources")
+    ? collection("data/sources", true)
     : collection("fixtures/demo/sources");
 const projectsJson =
   dataMode === "real"
-    ? collection("data/projects")
+    ? collection("data/projects", true)
     : collection("fixtures/demo/projects");
 
 const date = z.iso.date();

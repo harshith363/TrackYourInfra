@@ -6,8 +6,10 @@
   "scripts": {
     "predev": "node scripts/copy-map-worker.mjs",
     "dev": "astro dev",
+    "dev:published": "node scripts/sync-public-data.mjs && node scripts/copy-map-worker.mjs && TRACKYOURINFRA_DATA_MODE=real TRACKYOURINFRA_DATA_ROOT=.cache/public-data astro dev",
     "prebuild": "node scripts/copy-map-worker.mjs",
     "build": "npm run validate && astro build",
+    "build:published": "node scripts/sync-public-data.mjs && TRACKYOURINFRA_DATA_MODE=real TRACKYOURINFRA_DATA_ROOT=.cache/public-data npm run build",
     "preview": "astro preview",
     "check": "astro check",
     "validate": "node --import tsx scripts/validate.ts",

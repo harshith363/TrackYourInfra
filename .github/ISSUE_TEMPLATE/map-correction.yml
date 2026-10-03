@@ -6,21 +6,12 @@ body:
     attributes:
       value: "Draw a route at /contribute/map/ and paste its GeoJSON. A community proposal remains unverified after publication."
   - type: input
-    id: contribution-type
-    attributes: { label: Contribution type, value: Map correction }
-    validations: { required: true }
-  - type: input
     id: project-id
     attributes: { label: Project ID }
     validations: { required: true }
-  - type: dropdown
-    id: kind
+  - type: markdown
     attributes:
-      {
-        label: Map contribution kind,
-        options: [Unverified community proposal, Evidence-reviewed alignment],
-      }
-    validations: { required: true }
+      value: "Submitted routes are displayed only as dashed, unverified community proposals. This form cannot replace an accepted alignment."
   - type: textarea
     id: geojson
     attributes: { label: Route editor GeoJSON, render: json }
@@ -39,25 +30,6 @@ body:
     id: source-url
     attributes: { label: Public source URL }
     validations: { required: true }
-  - type: input
-    id: source-title
-    attributes: { label: Source title }
-    validations: { required: true }
-  - type: input
-    id: source-publisher
-    attributes: { label: Source publisher }
-    validations: { required: true }
-  - type: dropdown
-    id: source-type
-    attributes: { label: Source type, options: [primary, reporting, field] }
-    validations: { required: true }
-  - type: input
-    id: source-date
-    attributes:
-      { label: Source publication date (optional), placeholder: YYYY-MM-DD }
-  - type: input
-    id: source-section
-    attributes: { label: Source section or page (optional) }
   - type: textarea
     id: evidence
     attributes: { label: "What does this source establish?" }

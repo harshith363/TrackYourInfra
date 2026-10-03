@@ -4,7 +4,7 @@ title: "[Project update] "
 body:
   - type: markdown
     attributes:
-      value: "Change one project fact with a public source. Valid submissions are published automatically and marked as community-submitted."
+      value: "Change one project fact with a public source. Valid submissions are recorded automatically as community-submitted data."
   - type: input
     id: project-id
     attributes:

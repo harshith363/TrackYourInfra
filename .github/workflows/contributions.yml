@@ -4,11 +4,11 @@ on:
     types: [opened, edited, reopened]
 
 concurrency:
-  group: contribution-${{ github.event.issue.number || github.event.pull_request.number }}
+  group: public-data-publication
   cancel-in-progress: false
 
 jobs:
-  prepare:
+  publish:
     if: >-
       github.event_name == 'issues' &&
       contains(github.event.issue.body, '### Public source URL')
@@ -16,20 +16,27 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: write
-      pull-requests: write
       issues: write
-      statuses: write
-      checks: write
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
+          persist-credentials: true
+      - uses: actions/checkout@v4
+        with:
+          ref: public-data
+          path: .published-data
           persist-credentials: true
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - name: Load the latest published records
+        run: |
+          cp -R .published-data/data/projects/. data/projects/
+          cp -R .published-data/data/sources/. data/sources/
+          cp .published-data/data/changes.json data/changes.json
       - name: Generate data-only change from the issue form
         id: contribution
         env:
@@ -43,57 +50,29 @@ jobs:
           npm test
           npm run check
           npm run build
-      - name: Publish the validated data change
+      - name: Commit the validated data to the public-data branch
         env:
           GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ steps.contribution.outputs.branch }}
-          BODY_PATH: ${{ steps.contribution.outputs.body_path }}
-          TITLE: ${{ steps.contribution.outputs.title }}
           ISSUE_NUMBER: ${{ steps.contribution.outputs.issue_number }}
           ISSUE_HASH: ${{ steps.contribution.outputs.issue_hash }}
           CONTRIBUTION_KIND: ${{ steps.contribution.outputs.kind }}
+          PROJECT_PATH: ${{ steps.contribution.outputs.project_path }}
+          SOURCE_PATH: ${{ steps.contribution.outputs.source_path }}
         run: |
-          existing="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --head "$BRANCH" --json url --jq '.[0].url // empty')"
-          if [ -n "$existing" ]; then
-            state="$(gh pr view "$existing" --repo "$GITHUB_REPOSITORY" --json state --jq .state)"
-            if [ "$state" = "MERGED" ]; then
-              echo "This issue revision was already published: $existing" >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
-            pr="$existing"
-            sha="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq .headRefOid)"
-          else
-            git switch -c "$BRANCH"
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add data/projects data/sources data/changes.json
-            git commit -m "Generate data change for issue #${ISSUE_NUMBER}"
-            git push origin "$BRANCH"
-            sha="$(git rev-parse HEAD)"
-            gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=site -f description='Automated data and site checks passed' >/dev/null
-            gh api --method POST "repos/$GITHUB_REPOSITORY/check-runs" -f name=site -f head_sha="$sha" -f status=completed -f conclusion=success -f 'output[title]=Contribution validation passed' -f 'output[summary]=The issue form, data records, tests, type checks, and real-data build passed.' >/dev/null
-            pr="$(gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "$TITLE" --body-file "$BODY_PATH")"
-          fi
-          PR_URL="$pr" HEAD_SHA="$sha" node --import tsx scripts/verify-automatic-publication.ts
-          merged=false
-          for attempt in 1 2 3 4 5 6; do
-            if gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash --delete-branch --match-head-commit "$sha"; then
-              merged=true
-              break
-            fi
-            sleep 5
-          done
-          if [ "$merged" != true ]; then
-            echo "GitHub did not merge the validated PR; the issue remains available for retry." >&2
-            exit 1
-          fi
-          gh label create 'contribution:published' --repo "$GITHUB_REPOSITORY" --color '0e8a16' --description 'Automatically published data contribution' --force
-          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label 'contribution:published'
-          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Published automatically after structural checks. The source claim has not been independently verified; see $pr."
-          echo "Published $pr" >> "$GITHUB_STEP_SUMMARY"
-          for stale in $(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefName --jq ".[] | select(.headRefName | startswith(\"automation/issue-${ISSUE_NUMBER}-\")) | select(.headRefName != \"${BRANCH}\") | .number"); do
-            gh pr close "$stale" --repo "$GITHUB_REPOSITORY" --comment 'Superseded by a published issue revision.'
-          done
+          cp "$PROJECT_PATH" ".published-data/$PROJECT_PATH"
+          if [ -n "$SOURCE_PATH" ]; then cp "$SOURCE_PATH" ".published-data/$SOURCE_PATH"; fi
+          cp data/changes.json .published-data/data/changes.json
+          git -C .published-data add data/projects data/sources data/changes.json
+          node --import tsx scripts/verify-data-publication.ts
+          git -C .published-data config user.name 'github-actions[bot]'
+          git -C .published-data config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C .published-data commit -m "Publish data from issue #${ISSUE_NUMBER}" -m "Issue SHA256: ${ISSUE_HASH}"
+          git -C .published-data push origin HEAD:public-data
+          sha="$(git -C .published-data rev-parse HEAD)"
+          gh label create 'contribution:recorded' --repo "$GITHUB_REPOSITORY" --color '0e8a16' --description 'Validated contribution committed to public-data' --force
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label 'contribution:recorded'
+          gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "Validated data was committed to the public-data branch at $sha. The source claim has not been independently verified. The website reflects it after the next real-data build or deployment."
+          echo "Recorded issue #${ISSUE_NUMBER} in public-data at $sha" >> "$GITHUB_STEP_SUMMARY"
       - name: Explain a failed submission
         if: failure()
         env:

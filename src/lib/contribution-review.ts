@@ -5,7 +5,7 @@ export function assertDataOnlyDiff(files: unknown, kind: string) {
     throw new Error("Expected two or three generated data files.");
   const list = files as ChangedFile[];
   if (list.some((file) => !["added", "modified"].includes(file.status)))
-    throw new Error("Generated PR cannot delete or rename files.");
+    throw new Error("Generated data change cannot delete or rename files.");
   const changes = list.filter((file) => file.filename === "data/changes.json");
   const projects = list.filter((file) =>
     /^data\/projects\/[a-z0-9-]+\.json$/.test(file.filename),
@@ -22,6 +22,6 @@ export function assertDataOnlyDiff(files: unknown, kind: string) {
     changes.length + sources.length + projects.length !== list.length
   )
     throw new Error(
-      "PR contains unexpected files or is missing generated data.",
+      "Data change contains unexpected files or is missing generated data.",
     );
 }

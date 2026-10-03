@@ -53,10 +53,13 @@ if (
   changes.some((item) => item.id === proposal.change.id)
 )
   throw new Error("This issue already has a published change record.");
-const projectPath = resolve(`data/projects/${proposal.project.id}.json`);
+const projectRelativePath = `data/projects/${proposal.project.id}.json`;
+const projectPath = resolve(projectRelativePath);
 writeFileSync(projectPath, `${JSON.stringify(proposal.project, null, 2)}\n`);
+let sourceRelativePath = "";
 if (proposal.sources[0]) {
-  const sourcePath = resolve(`data/sources/${proposal.sources[0].id}.json`);
+  sourceRelativePath = `data/sources/${proposal.sources[0].id}.json`;
+  const sourcePath = resolve(sourceRelativePath);
   writeFileSync(
     sourcePath,
     `${JSON.stringify(proposal.sources[0], null, 2)}\n`,
@@ -66,32 +69,9 @@ if (proposal.sources[0]) {
 changes.push(proposal.change);
 writeFileSync(changesPath, `${JSON.stringify(changes, null, 2)}\n`);
 
-const branch = `automation/issue-${issue.number}-${proposal.issueHash.slice(0, 12)}`;
-const title = `Data contribution from issue #${issue.number}`;
-const body = [
-  `Closes #${issue.number}`,
-  "",
-  `Original report: ${issue.html_url}`,
-  `Issue: #${issue.number}`,
-  `Issue SHA256: ${proposal.issueHash}`,
-  `Contribution type: ${proposal.kind}`,
-  `Project: ${proposal.project.id}`,
-  "",
-  "Automatically generated from the issue and checked for data validity. Source claims have not been independently verified.",
-  proposal.kind === "map"
-    ? "A community proposal remains unverified unless the form requested an evidence-reviewed alignment and the source establishes that exact alignment."
-    : "",
-]
-  .filter(Boolean)
-  .join("\n");
-const bodyPath = resolve(
-  process.env.RUNNER_TEMP ?? ".",
-  `issue-${issue.number}-body.md`,
-);
-writeFileSync(bodyPath, `${body}\n`);
 if (process.env.GITHUB_OUTPUT)
   appendFileSync(
     process.env.GITHUB_OUTPUT,
-    `branch=${branch}\nbody_path=${bodyPath}\ntitle=${title}\nissue_number=${issue.number}\nissue_hash=${proposal.issueHash}\nkind=${proposal.kind}\n`,
+    `issue_number=${issue.number}\nissue_hash=${proposal.issueHash}\nkind=${proposal.kind}\nproject_path=${projectRelativePath}\nsource_path=${sourceRelativePath}\n`,
   );
 console.log(`Prepared ${proposal.kind} for ${proposal.project.id}.`);

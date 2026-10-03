@@ -4,7 +4,7 @@ title: "[New metro project] "
 body:
   - type: markdown
     attributes:
-      value: "Add a project with one public source. The bot checks and publishes valid submissions automatically. Source claims are shown as community-submitted, not independently verified. Unknown costs, dates, and routes are fine."
+      value: "Add a project with one public source. The bot checks and records valid submissions automatically in the public-data branch. Source claims are community-submitted, not independently verified. Unknown costs, dates, and routes are fine."
   - type: input
     id: name
     attributes:
